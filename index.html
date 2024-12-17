@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roxonn Contribution Demo</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @keyframes tokenTransfer {
+            0% { transform: translateX(0) scale(1); opacity: 1; }
+            50% { transform: translateX(100px) scale(1.2); opacity: 0.8; }
+            100% { transform: translateX(200px) scale(1); opacity: 0; }
+        }
+        .token-animation {
+            animation: tokenTransfer 1.5s ease-in-out;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        body {
+            background: linear-gradient(135deg, #13151a 0%, #1e2127 100%);
+            min-height: 100vh;
+            color: white;
+        }
+    </style>
+</head>
+<body class="p-8">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[#00C2FF] to-[#7000FF]">
+                Roxonn Contribution Demo
+            </h1>
+            <p class="text-gray-400">Experience how contributing earns you ROXN tokens</p>
+        </div>
+
+        <!-- Demo Sections -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Issues Section -->
+            <div class="glass-card rounded-xl p-6">
+                <h2 class="text-2xl font-semibold mb-4 flex items-center">
+                    <i class="fas fa-exclamation-circle text-[#00C2FF] mr-2"></i>
+                    Available Issues
+                </h2>
+                <div class="space-y-4" id="issuesList">
+                    <!-- Issues will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Simulation Section -->
+            <div class="glass-card rounded-xl p-6">
+                <h2 class="text-2xl font-semibold mb-4 flex items-center">
+                    <i class="fas fa-play-circle text-[#00C2FF] mr-2"></i>
+                    Live Simulation
+                </h2>
+                <div id="simulationArea" class="space-y-4">
+                    <div class="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
+                        <span id="currentStep">Select an issue to start</span>
+                        <span id="tokenBalance" class="text-[#00C2FF]">Balance: 0 ROXN</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wallet Section -->
+        <div class="mt-8 glass-card rounded-xl p-6">
+            <h2 class="text-2xl font-semibold mb-4 flex items-center">
+                <i class="fas fa-wallet text-[#00C2FF] mr-2"></i>
+                Your ROXN Wallet
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-gray-800 rounded-lg p-4">
+                    <div class="text-gray-400">Total Earned</div>
+                    <div class="text-2xl font-bold text-[#00C2FF]" id="totalEarned">0 ROXN</div>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-4">
+                    <div class="text-gray-400">Contributions</div>
+                    <div class="text-2xl font-bold text-[#00C2FF]" id="totalContributions">0</div>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-4">
+                    <div class="text-gray-400">Value (₹)</div>
+                    <div class="text-2xl font-bold text-[#00C2FF]" id="inrValue">₹0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const issues = [
+            {
+                id: 1,
+                title: "Fix Documentation Typo",
+                type: "minor-bug",
+                reward: 10,
+                steps: ["Fork Repository", "Fix Typo", "Create PR", "Get Merged"]
+            },
+            {
+                id: 2,
+                title: "Fix Login Function",
+                type: "major-bug",
+                reward: 50,
+                steps: ["Fork Repository", "Debug Issue", "Implement Fix", "Add Tests", "Create PR", "Get Merged"]
+            },
+            {
+                id: 3,
+                title: "Add Dark Mode",
+                type: "feature",
+                reward: 100,
+                steps: ["Fork Repository", "Design Feature", "Implement", "Add Tests", "Create PR", "Get Merged"]
+            }
+        ];
+
+        let currentBalance = 0;
+        let totalContributions = 0;
+
+        function updateWallet(amount) {
+            currentBalance += amount;
+            totalContributions++;
+            document.getElementById('totalEarned').textContent = `${currentBalance} ROXN`;
+            document.getElementById('totalContributions').textContent = totalContributions;
+            document.getElementById('inrValue').textContent = `₹${currentBalance * 3}`;
+            document.getElementById('tokenBalance').textContent = `Balance: ${currentBalance} ROXN`;
+        }
+
+        function simulateContribution(issue) {
+            const simulationArea = document.getElementById('simulationArea');
+            let currentStepIndex = 0;
+
+            function nextStep() {
+                if (currentStepIndex < issue.steps.length) {
+                    document.getElementById('currentStep').textContent = 
+                        `${issue.steps[currentStepIndex]} (${currentStepIndex + 1}/${issue.steps.length})`;
+                    currentStepIndex++;
+                    setTimeout(nextStep, 1500);
+                } else {
+                    // Simulate token transfer
+                    const token = document.createElement('div');
+                    token.className = 'token-animation';
+                    token.innerHTML = '<i class="fas fa-coins text-[#00C2FF] text-2xl"></i>';
+                    simulationArea.appendChild(token);
+
+                    setTimeout(() => {
+                        updateWallet(issue.reward);
+                        token.remove();
+                        document.getElementById('currentStep').textContent = 'Contribution Complete! 🎉';
+                    }, 1500);
+                }
+            }
+
+            nextStep();
+        }
+
+        // Populate issues
+        const issuesList = document.getElementById('issuesList');
+        issues.forEach(issue => {
+            const issueElement = document.createElement('div');
+            issueElement.className = 'bg-gray-800 rounded-lg p-4 cursor-pointer hover:bg-gray-700 transition';
+            issueElement.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 class="font-semibold">${issue.title}</h3>
+                        <span class="text-sm text-gray-400">${issue.type}</span>
+                    </div>
+                    <div class="text-[#00C2FF]">${issue.reward} ROXN</div>
+                </div>
+            `;
+            issueElement.onclick = () => simulateContribution(issue);
+            issuesList.appendChild(issueElement);
+        });
+    </script>
+</body>
+</html>
