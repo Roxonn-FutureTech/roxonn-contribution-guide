@@ -1,3 +1,4 @@
+// Contract configuration
 const CONTRACT_ADDRESS = 'xdc2b0f01390349128e9aB9d90348d93Ecec46E6079';
 const TOKEN_ADDRESS = 'xdc8AEB0d898cA8Bb38da27d5196890EC36552380f0';
 
@@ -61,17 +62,19 @@ const TOKEN_ABI = [
     }
 ];
 
+// Web3Service class for handling blockchain interactions
 class Web3Service {
     constructor() {
-        this.web3 = null;
-        this.account = null;
-        this.contract = null;
-        this.tokenContract = null;
-        this.networkId = '50';  // XDC Network ID
+        // Network configuration
+        this.networkId = '50';  // XDC Mainnet
         this.rpcUrl = 'https://erpc.xinfin.network';  // XDC Mainnet RPC
         this.contractAddress = CONTRACT_ADDRESS;  
         this.tokenAddress = TOKEN_ADDRESS;  
         this.isOwner = false;
+        this.web3 = null;
+        this.account = null;
+        this.contract = null;
+        this.tokenContract = null;
     }
 
     async initialize() {
