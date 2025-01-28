@@ -200,7 +200,7 @@
                 <div id="network-status" class="text-sm text-gray-400">
                     Network: <span class="text-yellow-400">Please connect wallet</span>
                 </div>
-                <button onclick="connectWallet()" class="connect-wallet-btn">
+                <button onclick="App.connectWallet()" class="connect-wallet-btn">
                     Connect Wallet
                 </button>
             </div>
@@ -235,7 +235,7 @@
                                 <span class="text-white font-bold">200 ROXN</span>
                             </div>
                         </div>
-                        <button onclick="showWorkflow(this)" class="contribute-btn">
+                        <button onclick="App.showWorkflow(this)" class="contribute-btn">
                             Start Contributing
                         </button>
                     </div>
@@ -251,7 +251,7 @@
                                 <span class="difficulty medium">Medium</span>
                                 <span class="task-reward">200 ROXN</span>
                             </div>
-                            <button onclick="showWorkflow(this)" class="contribute-btn w-full">
+                            <button onclick="App.showWorkflow(this)" class="contribute-btn w-full">
                                 Start Contributing
                             </button>
                         </div>
@@ -268,7 +268,7 @@
                                 <span class="difficulty hard">Hard</span>
                                 <span class="task-reward">300 ROXN</span>
                             </div>
-                            <button onclick="showWorkflow(this)" class="contribute-btn w-full">
+                            <button onclick="App.showWorkflow(this)" class="contribute-btn w-full">
                                 Start Contributing
                             </button>
                         </div>
@@ -333,7 +333,7 @@
                                 <li>Register your contribution to receive ROXN tokens</li>
                             </ol>
                         </div>
-                        <button onclick="nextStep()" class="contribute-btn w-full">
+                        <button onclick="App.nextStep()" class="contribute-btn w-full">
                             Start Contributing
                         </button>
                     </div>
@@ -346,7 +346,7 @@
                             <div class="code-block mb-4">
                                 <div class="code-header flex justify-between items-center">
                                     <span>Terminal</span>
-                                    <button onclick="copyCode(this)" class="copy-btn">Copy</button>
+                                    <button onclick="App.copyCode(this)" class="copy-btn">Copy</button>
                                 </div>
                                 <pre class="command-text"><code>git clone https://github.com/roxonn/roxonn-website.git
 cd roxonn-website
@@ -361,7 +361,7 @@ git checkout -b feature/task-<span class="task-number">1</span></code></pre>
                                 </ul>
                             </div>
                         </div>
-                        <button onclick="nextStep()" class="contribute-btn w-full">
+                        <button onclick="App.nextStep()" class="contribute-btn w-full">
                             Next: Make Changes
                         </button>
                     </div>
@@ -374,7 +374,7 @@ git checkout -b feature/task-<span class="task-number">1</span></code></pre>
                             <div class="code-block mb-4">
                                 <div class="code-header flex justify-between items-center">
                                     <span>Terminal</span>
-                                    <button onclick="copyCode(this)" class="copy-btn">Copy</button>
+                                    <button onclick="App.copyCode(this)" class="copy-btn">Copy</button>
                                 </div>
                                 <pre class="command-text"><code>git add .
 git commit -m "feat: implement task-<span class="task-number">1</span>"
@@ -389,7 +389,7 @@ git push origin feature/task-<span class="task-number">1</span></code></pre>
                                 </ul>
                             </div>
                         </div>
-                        <button onclick="nextStep()" class="contribute-btn w-full">
+                        <button onclick="App.nextStep()" class="contribute-btn w-full">
                             Next: Submit PR
                         </button>
                     </div>
@@ -414,7 +414,7 @@ git push origin feature/task-<span class="task-number">1</span></code></pre>
                                 </div>
                             </div>
                         </div>
-                        <button onclick="nextStep()" class="contribute-btn w-full">
+                        <button onclick="App.nextStep()" class="contribute-btn w-full">
                             Next: Get Rewarded
                         </button>
                     </div>
@@ -439,7 +439,7 @@ git push origin feature/task-<span class="task-number">1</span></code></pre>
                                 <p class="mt-4 text-yellow-400">Note: You don't pay any fees! The project owner handles the registration.</p>
                             </div>
                         </div>
-                        <button onclick="handleContribution(this)" class="contribute-btn w-full" id="register-contribution-btn">
+                        <button onclick="App.handleContribution(this)" class="contribute-btn w-full" id="register-contribution-btn">
                             Register Contribution
                         </button>
                     </div>
@@ -463,7 +463,7 @@ git push origin feature/task-<span class="task-number">1</span></code></pre>
                                 <p class="text-sm text-gray-400">Check your wallet for the tokens!</p>
                             </div>
                         </div>
-                        <button onclick="closeModal()" class="contribute-btn w-full">
+                        <button onclick="App.closeModal()" class="contribute-btn w-full">
                             Close
                         </button>
                     </div>
@@ -476,13 +476,13 @@ git push origin feature/task-<span class="task-number">1</span></code></pre>
                             <p class="error-message text-red-500"></p>
                             <p class="text-sm text-gray-400 mt-2">Please try again or contact support if the issue persists.</p>
                         </div>
-                        <button onclick="closeModal()" class="contribute-btn w-full">
+                        <button onclick="App.closeModal()" class="contribute-btn w-full">
                             Close
                         </button>
                     </div>
                 </div>
 
-                <button class="close-btn absolute top-4 right-4 text-gray-500 hover:text-white" onclick="closeModal()">×</button>
+                <button class="close-btn absolute top-4 right-4 text-gray-500 hover:text-white" onclick="App.closeModal()">×</button>
             </div>
         </div>
 
