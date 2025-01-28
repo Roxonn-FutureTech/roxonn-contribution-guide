@@ -14,6 +14,8 @@
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 1rem;
             transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
 
         .glass-card:hover {
@@ -28,6 +30,8 @@
             border-radius: 0.5rem;
             font-weight: 600;
             transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
 
         .btn-primary:hover {
@@ -40,6 +44,71 @@
             cursor: not-allowed;
         }
 
+        .btn-primary.success {
+            background: linear-gradient(135deg, #00FF88 0%, #00C247 100%);
+        }
+
+        .btn-primary.error {
+            background: linear-gradient(135deg, #FF0066 0%, #FF0000 100%);
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .check-mark, .error-mark {
+            display: inline-block;
+            margin-right: 8px;
+            animation: scale-in 0.3s ease-out;
+        }
+
+        @keyframes scale-in {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+
+        .token-animation {
+            position: absolute;
+            font-size: 24px;
+            animation: float-up 2s ease-out;
+            pointer-events: none;
+        }
+
+        .floating-text {
+            position: absolute;
+            color: #00FF88;
+            font-weight: bold;
+            animation: float-up 2s ease-out;
+            pointer-events: none;
+        }
+
+        @keyframes float-up {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, 0) scale(0.5);
+            }
+            20% {
+                opacity: 1;
+                transform: translate(-50%, -20px) scale(1.2);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -100px) scale(1);
+            }
+        }
+
         .wallet-btn {
             background: rgba(0, 194, 255, 0.1);
             color: #00C2FF;
@@ -48,14 +117,34 @@
             border-radius: 0.5rem;
             font-weight: 600;
             transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
 
         .wallet-btn.connected {
             background: rgba(0, 194, 255, 0.2);
         }
 
-        .wallet-btn:hover {
-            background: rgba(0, 194, 255, 0.2);
+        .wallet-btn.connected::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                transparent
+            );
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            100% {
+                left: 100%;
+            }
         }
 
         .task-reward {
@@ -65,15 +154,57 @@
             border-radius: 1rem;
             font-weight: 600;
             font-size: 0.875rem;
+            transition: all 0.3s ease;
         }
 
-        .loading {
-            animation: spin 1s linear infinite;
+        .task-reward:hover {
+            background: rgba(0, 194, 255, 0.2);
+            transform: scale(1.05);
         }
 
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+        .toast {
+            animation: slide-up 0.3s ease-out;
+        }
+
+        @keyframes slide-up {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .workflow-step {
+            transition: all 0.5s ease-out;
+            padding: 1rem;
+            border-left: 2px solid rgba(255,255,255,0.1);
+            margin-left: 1rem;
+        }
+        
+        .workflow-step:last-child {
+            border-left: none;
+        }
+        
+        .step-icon {
+            background: rgba(255,255,255,0.1);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: -21px;
+        }
+        
+        .step-status {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
     </style>
 </head>
@@ -180,6 +311,23 @@
             </div>
         </section>
 
+        <div id="workflow-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50">
+            <div class="glass-card max-w-2xl w-full mx-4 p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold">Contributing to Task</h3>
+                    <button onclick="closeWorkflowModal()" class="text-gray-400 hover:text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="space-y-6" id="workflow-steps">
+                    <!-- Steps will be added dynamically -->
+                </div>
+            </div>
+        </div>
+
         <!-- Toast Notification -->
         <div id="toast" class="fixed bottom-4 right-4 hidden">
             <div class="glass-card p-4 flex items-center gap-3">
@@ -192,6 +340,128 @@
     </main>
 
     <script>
+        const workflowSteps = [
+            {
+                title: 'Fork Repository',
+                description: 'Creating a copy of the repository in your account...',
+                icon: '🔄',
+                duration: 1500
+            },
+            {
+                title: 'Clone Repository',
+                description: 'Downloading the code to your local machine...',
+                icon: '⬇️',
+                duration: 2000,
+                code: 'git clone https://github.com/yourusername/repository.git'
+            },
+            {
+                title: 'Create Branch',
+                description: 'Creating a new branch for your changes...',
+                icon: '🌿',
+                duration: 1000,
+                code: 'git checkout -b feature/task-implementation'
+            },
+            {
+                title: 'Make Changes',
+                description: 'Implementing the required changes...',
+                icon: '✏️',
+                duration: 2500,
+                code: '// Adding new code\n...'
+            },
+            {
+                title: 'Commit Changes',
+                description: 'Saving your changes...',
+                icon: '💾',
+                duration: 1500,
+                code: 'git add .\ngit commit -m "Implement requested changes"'
+            },
+            {
+                title: 'Push Changes',
+                description: 'Uploading your changes to GitHub...',
+                icon: '⬆️',
+                duration: 2000,
+                code: 'git push origin feature/task-implementation'
+            },
+            {
+                title: 'Create Pull Request',
+                description: 'Submitting your changes for review...',
+                icon: '🔀',
+                duration: 2000
+            },
+            {
+                title: 'Wait for Review',
+                description: 'Maintainers will review your changes...',
+                icon: '👀',
+                duration: 1500
+            },
+            {
+                title: 'Changes Approved',
+                description: 'Your contribution has been accepted!',
+                icon: '✅',
+                duration: 1000
+            }
+        ];
+
+        function showWorkflowModal(taskId) {
+            const modal = document.getElementById('workflow-modal');
+            const stepsContainer = document.getElementById('workflow-steps');
+            stepsContainer.innerHTML = '';
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            let totalDelay = 0;
+            
+            workflowSteps.forEach((step, index) => {
+                const stepElement = document.createElement('div');
+                stepElement.className = 'workflow-step opacity-0 transform translate-y-4';
+                stepElement.innerHTML = `
+                    <div class="flex items-start gap-4">
+                        <div class="step-icon text-2xl">${step.icon}</div>
+                        <div class="flex-1">
+                            <h4 class="font-semibold mb-1">${step.title}</h4>
+                            <p class="text-gray-400 text-sm mb-2">${step.description}</p>
+                            ${step.code ? `
+                                <div class="bg-black/30 p-3 rounded-lg">
+                                    <pre class="text-sm text-green-400"><code>${step.code}</code></pre>
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="step-status"></div>
+                    </div>
+                `;
+                
+                stepsContainer.appendChild(stepElement);
+                
+                setTimeout(() => {
+                    stepElement.classList.remove('opacity-0', 'translate-y-4');
+                    stepElement.classList.add('opacity-100', 'translate-y-0');
+                    
+                    const statusElement = stepElement.querySelector('.step-status');
+                    statusElement.innerHTML = '⏳';
+                    
+                    setTimeout(() => {
+                        statusElement.innerHTML = '✅';
+                        if (index === workflowSteps.length - 1) {
+                            setTimeout(() => {
+                                // Show token earning animation
+                                showTokenAnimation(taskId);
+                                // Close modal after a delay
+                                setTimeout(closeWorkflowModal, 1500);
+                            }, 1000);
+                        }
+                    }, step.duration);
+                }, totalDelay);
+                
+                totalDelay += step.duration + 500;
+            });
+        }
+
+        function closeWorkflowModal() {
+            const modal = document.getElementById('workflow-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
         // Toast notification
         function showToast(message, duration = 3000) {
             const toast = document.getElementById('toast');
@@ -211,13 +481,16 @@
             
             try {
                 button.disabled = true;
-                button.innerHTML = '<svg class="loading w-5 h-5" viewBox="0 0 24 24"><path fill="currentColor" d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"></path></svg>';
+                button.innerHTML = '<div class="loading-spinner"></div> Processing...';
                 
+                // Show the workflow modal first
+                showWorkflowModal(taskId);
+                
+                // Continue with the web3 transaction after workflow animation
                 const tx = await web3Service.registerContribution(taskId);
                 
                 showToast('Contribution registered successfully! Transaction: ' + tx.substring(0, 10) + '...');
                 
-                // Update button state
                 button.textContent = 'Contributed';
                 button.disabled = true;
                 button.classList.add('opacity-50');

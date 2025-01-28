@@ -1,53 +1,11 @@
 const CONTRACT_ADDRESS = '0x0000000000000000000000000000000000000000'; // Replace with actual contract address
 const CONTRACT_ABI = [
     {
-        "inputs": [],
+        "inputs": [{"name": "taskId", "type": "string"}],
+        "name": "registerContribution",
+        "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "constructor"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": false,
-                "internalType": "address",
-                "name": "contributor",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "string",
-                "name": "taskId",
-                "type": "string"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "reward",
-                "type": "uint256"
-            }
-        ],
-        "name": "ContributionRegistered",
-        "type": "event"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": false,
-                "internalType": "address",
-                "name": "contributor",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "amount",
-                "type": "uint256"
-            }
-        ],
-        "name": "RewardClaimed",
-        "type": "event"
+        "type": "function"
     },
     {
         "inputs": [],
@@ -57,17 +15,14 @@ const CONTRACT_ABI = [
         "type": "function"
     },
     {
+        "anonymous": false,
         "inputs": [
-            {
-                "internalType": "string",
-                "name": "taskId",
-                "type": "string"
-            }
+            {"indexed": true, "name": "contributor", "type": "address"},
+            {"indexed": false, "name": "taskId", "type": "string"},
+            {"indexed": false, "name": "reward", "type": "uint256"}
         ],
-        "name": "registerContribution",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
+        "name": "ContributionRegistered",
+        "type": "event"
     }
 ];
 
@@ -180,18 +135,73 @@ class Web3Service {
             throw new Error('Web3 not initialized');
         }
 
+        // Show loading animation
+        const button = document.querySelector(`[data-task-id="${taskId}"]`);
+        const originalText = button.textContent;
+        button.innerHTML = '<div class="loading-spinner"></div> Processing...';
+        button.disabled = true;
+
         try {
+            // Estimate gas first
+            const gasEstimate = await this.contract.methods.registerContribution(taskId)
+                .estimateGas({ from: this.account });
+
+            // Add 20% buffer to gas estimate
+            const gas = Math.ceil(gasEstimate * 1.2);
+
             const result = await this.contract.methods.registerContribution(taskId)
                 .send({ 
                     from: this.account,
                     gasPrice: await this.web3.eth.getGasPrice(),
-                    gas: 200000 // Adjust gas limit as needed
+                    gas: gas
                 });
+
+            // Show success animation
+            button.classList.add('success');
+            button.innerHTML = '<div class="check-mark">✓</div> Success!';
+            
+            // Show token transfer animation
+            this.showTokenAnimation(taskId);
+
             return result.transactionHash;
         } catch (error) {
             console.error('Error registering contribution:', error);
+            button.classList.add('error');
+            button.innerHTML = '<div class="error-mark">×</div> Failed';
             throw new Error(error.message || 'Failed to register contribution');
+        } finally {
+            setTimeout(() => {
+                button.disabled = false;
+                button.innerHTML = originalText;
+                button.classList.remove('success', 'error');
+            }, 3000);
         }
+    }
+
+    showTokenAnimation(taskId) {
+        const taskCard = document.querySelector(`[data-task-id="${taskId}"]`).closest('.glass-card');
+        const rewardElement = taskCard.querySelector('.task-reward');
+        
+        // Create token element
+        const token = document.createElement('div');
+        token.className = 'token-animation';
+        token.innerHTML = '🪙';
+        taskCard.appendChild(token);
+
+        // Get reward amount
+        const rewardAmount = rewardElement.textContent.split(' ')[0];
+        
+        // Create floating text
+        const floatingText = document.createElement('div');
+        floatingText.className = 'floating-text';
+        floatingText.textContent = `+${rewardAmount} ROXN`;
+        taskCard.appendChild(floatingText);
+
+        // Cleanup after animation
+        setTimeout(() => {
+            token.remove();
+            floatingText.remove();
+        }, 2000);
     }
 
     async claimReward() {
