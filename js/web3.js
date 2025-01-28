@@ -66,8 +66,9 @@ const TOKEN_ABI = [
 class Web3Service {
     constructor() {
         // Network configuration
-        this.networkId = '50';  // XDC Mainnet
-        this.rpcUrl = 'https://erpc.xinfin.network';  // XDC Mainnet RPC
+        this.networkId = '51'; // XDC Apothem Testnet
+        this.chainId = '0x33'; // 51 in hex
+        this.rpcUrl = 'https://erpc.apothem.network';  // XDC Testnet RPC
         this.contractAddress = CONTRACT_ADDRESS;  
         this.tokenAddress = TOKEN_ADDRESS;  
         this.isOwner = false;
@@ -89,52 +90,63 @@ class Web3Service {
             
             // Initialize Web3 with XDC network
             this.web3 = new Web3(provider);
-
-            // Add XDC Network if not present
-            try {
-                await provider.request({
-                    method: 'wallet_addEthereumChain',
-                    params: [{
-                        chainId: '0x32',  // 50 in hex
-                        chainName: 'XDC Network',
-                        nativeCurrency: {
-                            name: 'XDC',
-                            symbol: 'XDC',
-                            decimals: 18
-                        },
-                        rpcUrls: ['https://erpc.xinfin.network'],
-                        blockExplorerUrls: ['https://explorer.xinfin.network']
-                    }]
-                });
-            } catch (error) {
-                console.log('Network may already be added');
-            }
-
-            // Switch to XDC Network
-            try {
-                await provider.request({
-                    method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: '0x32' }], // 50 in hex
-                });
-            } catch (error) {
-                if (error.code === 4902) {
-                    throw new Error('Please add XDC Network to your wallet');
-                }
-                throw new Error('Please switch to XDC Network');
-            }
             
+            // Request account access first
             try {
-                // Request account access
                 const accounts = await provider.request({ method: 'eth_requestAccounts' });
                 this.account = accounts[0];
+                console.log('Account connected:', this.account);
             } catch (error) {
                 throw new Error('Please connect your XDCPay wallet');
             }
 
-            // Verify network again
-            const network = await this.web3.eth.net.getId();
-            if (network.toString() !== this.networkId) {
-                throw new Error('Please switch to XDC Network');
+            // Get current network
+            const currentNetwork = await this.web3.eth.net.getId();
+            console.log('Current network:', currentNetwork);
+
+            // If not on XDC network, try to add it first
+            if (currentNetwork.toString() !== this.networkId) {
+                try {
+                    await provider.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: this.chainId,
+                            chainName: 'XDC Apothem Testnet',
+                            nativeCurrency: {
+                                name: 'XDC',
+                                symbol: 'XDC',
+                                decimals: 18
+                            },
+                            rpcUrls: [this.rpcUrl],
+                            blockExplorerUrls: ['https://explorer.apothem.network']
+                        }]
+                    });
+                    console.log('XDC Network added successfully');
+                } catch (addError) {
+                    console.log('Network may already be added:', addError.message);
+                }
+
+                // Now try to switch to XDC network
+                try {
+                    await provider.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: this.chainId }]
+                    });
+                    console.log('Switched to XDC Network');
+                } catch (switchError) {
+                    console.error('Failed to switch network:', switchError);
+                    if (switchError.code === 4902) {
+                        throw new Error('Please add XDC Network to your wallet');
+                    } else {
+                        throw new Error('Please manually switch to XDC Network in your wallet');
+                    }
+                }
+            }
+
+            // Verify network one more time
+            const finalNetwork = await this.web3.eth.net.getId();
+            if (finalNetwork.toString() !== this.networkId) {
+                throw new Error('Network switch failed. Please manually select XDC Network in your wallet.');
             }
 
             // Initialize contracts with checksummed addresses
@@ -170,14 +182,15 @@ class Web3Service {
                 });
 
                 // Listen for network changes
-                provider.on('networkChanged', (networkId) => {
-                    if (networkId.toString() !== this.networkId) {
+                provider.on('chainChanged', (chainId) => {
+                    if (chainId !== this.chainId) {
                         alert('Please connect to XDC Network');
                     }
                     window.location.reload();
                 });
             }
 
+            console.log('Web3Service initialization completed successfully');
             return true;
         } catch (error) {
             console.error('Initialization error:', error);
@@ -321,7 +334,7 @@ class Web3Service {
             
             // Update transaction details with XDC explorer link
             const txHash = tx.transactionHash.replace('0x', 'xdc');
-            const explorerLink = `https://explorer.xinfin.network/tx/${txHash}`;
+            const explorerLink = `https://explorer.apothem.network/tx/${txHash}`;
             
             successStep.querySelector('.transaction-hash').innerHTML = 
                 `Transaction: <a href="${explorerLink}" target="_blank" class="text-blue-400 hover:text-blue-300">
