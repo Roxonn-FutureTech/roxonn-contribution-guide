@@ -205,8 +205,8 @@
                 <div id="network-status" class="text-sm text-gray-400">
                     Network: <span class="text-yellow-400">Please connect wallet</span>
                 </div>
-                <button id="wallet-button" class="wallet-btn" onclick="web3Service.init()">
-                    Connect XDCPay
+                <button onclick="web3Service.initialize().then(() => updateWalletUI()).catch(error => handleError(error))" class="connect-wallet-btn">
+                    Connect Wallet
                 </button>
             </div>
         </div>
@@ -437,13 +437,14 @@ git push origin feature/task-<span class="task-number">1</span></code></pre>
                                 <p class="mb-2">To receive your reward:</p>
                                 <ol class="list-decimal list-inside space-y-1">
                                     <li>Make sure your PR is submitted</li>
-                                    <li>Connect your XDC wallet</li>
-                                    <li>Click "Register Contribution" below</li>
-                                    <li>Confirm the transaction in your wallet</li>
+                                    <li>Connect your XDC wallet (no fees required)</li>
+                                    <li>Wait for the project owner to review and approve</li>
+                                    <li>Once approved, tokens will be sent automatically</li>
                                 </ol>
+                                <p class="mt-4 text-yellow-400">Note: You don't pay any fees! The project owner handles the registration.</p>
                             </div>
                         </div>
-                        <button onclick="handleContribution(this)" class="contribute-btn w-full">
+                        <button onclick="handleContribution(this)" class="contribute-btn w-full" id="register-contribution-btn">
                             Register Contribution
                         </button>
                     </div>
