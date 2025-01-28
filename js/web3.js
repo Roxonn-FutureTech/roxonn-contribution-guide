@@ -24,6 +24,7 @@ class Web3Service {
         this.web3 = null;
         this.contract = null;
         this.account = null;
+        this.isOwner = false;
     }
 
     async init() {
@@ -71,6 +72,15 @@ class Web3Service {
 
             // Initialize contribution contract
             this.contract = new this.web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+
+            // Check if user is contract owner
+            try {
+                const owner = await this.contract.methods.owner().call();
+                this.isOwner = owner.toLowerCase() === this.account.toLowerCase();
+            } catch (error) {
+                console.warn('Could not check owner status:', error);
+                this.isOwner = false;
+            }
 
             // Update wallet button
             const walletBtn = document.getElementById('wallet-button');
@@ -137,12 +147,6 @@ class Web3Service {
                 throw new Error('Please connect your wallet first');
             }
 
-            // Convert taskId to a number and validate
-            const numericTaskId = parseInt(taskId.replace('task-', ''));
-            if (isNaN(numericTaskId)) {
-                throw new Error('Invalid task ID');
-            }
-
             // Show loading state
             const modal = document.querySelector('.workflow-modal');
             const loadingStep = modal.querySelector('.loading-step');
@@ -153,12 +157,42 @@ class Web3Service {
                 loadingStep.classList.add('active');
             }
 
-            // Register the contribution
-            const tx = await this.contract.methods.registerContribution(numericTaskId)
-                .send({ 
-                    from: this.account,
-                    gas: 200000
-                });
+            // Get task complexity from the UI
+            const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+            const complexity = taskElement.getAttribute('data-complexity') || 'easy';
+
+            // For demo purposes, we'll simulate the contribution registration
+            // since only the contract owner can register contributions
+            if (!this.isOwner) {
+                // Show a message explaining the demo mode
+                showToast('Demo Mode: Simulating contribution registration');
+                
+                // Wait for 2 seconds to simulate transaction
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Show success message
+                const successStep = modal.querySelector('.success-step');
+                if (successStep) {
+                    allSteps.forEach(step => step.classList.remove('active'));
+                    successStep.classList.add('active');
+                    successStep.querySelector('p').textContent = 'Demo Mode: Your contribution would be registered here';
+                    
+                    // Keep success visible for 2 seconds
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+
+                return '0x' + '0'.repeat(64); // Mock transaction hash
+            }
+
+            // If user is owner, proceed with actual contract interaction
+            const tx = await this.contract.methods.registerContribution(
+                this.account,
+                `GH-${taskId.replace('task-', '')}`,
+                complexity
+            ).send({ 
+                from: this.account,
+                gas: 200000
+            });
 
             // Show success message
             showToast('Contribution registered successfully!');
@@ -185,7 +219,13 @@ class Web3Service {
             if (errorStep) {
                 allSteps.forEach(step => step.classList.remove('active'));
                 errorStep.classList.add('active');
-                errorStep.querySelector('.error-message').textContent = error.message || 'Failed to register contribution';
+                
+                // Format the error message
+                let errorMessage = error.message || 'Failed to register contribution';
+                if (errorMessage.includes('onlyOwner')) {
+                    errorMessage = 'Demo Mode: In production, only the contract owner can register contributions';
+                }
+                errorStep.querySelector('.error-message').textContent = errorMessage;
                 
                 // Keep error visible for 2 seconds
                 await new Promise(resolve => setTimeout(resolve, 2000));

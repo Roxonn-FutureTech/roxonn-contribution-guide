@@ -169,6 +169,29 @@
             color: #e74c3c;
             margin: 10px 0;
         }
+
+        /* Difficulty Tags */
+        .difficulty {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .difficulty.easy {
+            background-color: rgba(72, 187, 120, 0.2);
+            color: #48bb78;
+        }
+
+        .difficulty.medium {
+            background-color: rgba(237, 137, 54, 0.2);
+            color: #ed8936;
+        }
+
+        .difficulty.hard {
+            background-color: rgba(245, 101, 101, 0.2);
+            color: #f56565;
+        }
     </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-gray-900 to-black text-white">
@@ -200,52 +223,42 @@
         </section>
 
         <section class="max-w-3xl mx-auto space-y-6" id="tasks-container">
-            <div class="glass-card p-6">
-                <div class="flex justify-between items-start mb-4">
-                    <div>
-                        <h3 class="text-xl font-semibold mb-2">Add Dark Mode Support</h3>
-                        <p class="text-gray-400 mb-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+                <div class="task-card glass-card" data-task-id="task-1" data-complexity="easy">
+                    <div class="p-6">
+                        <h3 class="text-xl font-bold mb-2">Add Dark Mode Support</h3>
+                        <p class="text-gray-300 mb-4">
                             Implement dark mode support using CSS variables and a theme toggle button.
                             The implementation should persist user's preference.
                         </p>
-                        <div class="flex gap-2">
-                            <span class="px-2 py-1 rounded-full text-xs bg-blue-500/10 text-blue-500">UI/UX</span>
-                            <span class="px-2 py-1 rounded-full text-xs bg-green-500/10 text-green-500">Easy</span>
+                        <div class="flex justify-between items-center">
+                            <span class="difficulty easy">Easy</span>
+                            <button 
+                                class="btn-primary" 
+                                onclick="handleContribution('task-1')"
+                                data-task-id="task-1">
+                                Start Contributing
+                            </button>
                         </div>
                     </div>
-                    <div class="flex flex-col items-end gap-4">
-                        <span class="task-reward">500 ROXN</span>
-                        <button 
-                            class="btn-primary" 
-                            onclick="handleContribution('task-1')"
-                            data-task-id="task-1">
-                            Start Contributing
-                        </button>
-                    </div>
                 </div>
-            </div>
 
-            <div class="glass-card p-6">
-                <div class="flex justify-between items-start mb-4">
-                    <div>
-                        <h3 class="text-xl font-semibold mb-2">Implement Responsive Design</h3>
-                        <p class="text-gray-400 mb-4">
+                <div class="task-card glass-card" data-task-id="task-2" data-complexity="medium">
+                    <div class="p-6">
+                        <h3 class="text-xl font-bold mb-2">Implement Responsive Design</h3>
+                        <p class="text-gray-300 mb-4">
                             Make the website fully responsive using Tailwind CSS breakpoints.
                             Should work well on mobile, tablet, and desktop.
                         </p>
-                        <div class="flex gap-2">
-                            <span class="px-2 py-1 rounded-full text-xs bg-blue-500/10 text-blue-500">UI/UX</span>
-                            <span class="px-2 py-1 rounded-full text-xs bg-yellow-500/10 text-yellow-500">Medium</span>
+                        <div class="flex justify-between items-center">
+                            <span class="difficulty medium">Medium</span>
+                            <button 
+                                class="btn-primary"
+                                onclick="handleContribution('task-2')"
+                                data-task-id="task-2">
+                                Start Contributing
+                            </button>
                         </div>
-                    </div>
-                    <div class="flex flex-col items-end gap-4">
-                        <span class="task-reward">1000 ROXN</span>
-                        <button 
-                            class="btn-primary"
-                            onclick="handleContribution('task-2')"
-                            data-task-id="task-2">
-                            Start Contributing
-                        </button>
                     </div>
                 </div>
             </div>
