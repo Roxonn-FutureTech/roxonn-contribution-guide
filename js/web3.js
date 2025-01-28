@@ -137,17 +137,60 @@ class Web3Service {
                 throw new Error('Please connect your wallet first');
             }
 
+            // Convert taskId to a number and validate
+            const numericTaskId = parseInt(taskId.replace('task-', ''));
+            if (isNaN(numericTaskId)) {
+                throw new Error('Invalid task ID');
+            }
+
+            // Show loading state
+            const modal = document.querySelector('.workflow-modal');
+            const loadingStep = modal.querySelector('.loading-step');
+            const allSteps = modal.querySelectorAll('.step');
+            
+            allSteps.forEach(step => step.classList.remove('active'));
+            if (loadingStep) {
+                loadingStep.classList.add('active');
+            }
+
             // Register the contribution
-            const tx = await this.contract.methods.registerContribution(taskId)
+            const tx = await this.contract.methods.registerContribution(numericTaskId)
                 .send({ 
                     from: this.account,
                     gas: 200000
                 });
 
+            // Show success message
             showToast('Contribution registered successfully!');
+            
+            // Show success step
+            const successStep = modal.querySelector('.success-step');
+            if (successStep) {
+                allSteps.forEach(step => step.classList.remove('active'));
+                successStep.classList.add('active');
+                
+                // Keep modal open for 2 seconds to show success
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+
             return tx.transactionHash;
         } catch (error) {
             console.error('Error registering contribution:', error);
+            
+            // Show error in the modal
+            const modal = document.querySelector('.workflow-modal');
+            const errorStep = modal.querySelector('.error-step');
+            const allSteps = modal.querySelectorAll('.step');
+            
+            if (errorStep) {
+                allSteps.forEach(step => step.classList.remove('active'));
+                errorStep.classList.add('active');
+                errorStep.querySelector('.error-message').textContent = error.message || 'Failed to register contribution';
+                
+                // Keep error visible for 2 seconds
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+
             showToast(error.message || 'Failed to register contribution');
             throw error;
         }

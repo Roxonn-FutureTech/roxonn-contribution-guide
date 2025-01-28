@@ -117,6 +117,58 @@
             font-family: monospace;
             color: #00ff00;
         }
+
+        /* Modal Steps */
+        .steps-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 200px;
+        }
+
+        .step {
+            display: none;
+            text-align: center;
+            width: 100%;
+        }
+
+        .step.active {
+            display: block;
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Success and Error Icons */
+        .success-icon {
+            color: #2ecc71;
+            font-size: 48px;
+            margin: 20px 0;
+        }
+
+        .error-icon {
+            color: #e74c3c;
+            font-size: 48px;
+            margin: 20px 0;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-gray-900 to-black text-white">
@@ -209,6 +261,42 @@
                 <div class="flex overflow-x-auto gap-4 pb-4" id="workflow-steps">
                     <!-- Steps will be added dynamically -->
                 </div>
+            </div>
+        </div>
+
+        <!-- Contribution Workflow Modal -->
+        <div class="workflow-modal">
+            <div class="modal-content">
+                <div class="steps-container">
+                    <!-- Initial Step -->
+                    <div class="step initial-step active">
+                        <h3>Start Contributing</h3>
+                        <p>Ready to contribute to this task?</p>
+                        <button onclick="handleContribution()" class="start-btn">Start</button>
+                    </div>
+
+                    <!-- Loading Step -->
+                    <div class="step loading-step">
+                        <h3>Processing</h3>
+                        <div class="loading-spinner"></div>
+                        <p>Please confirm the transaction in your wallet...</p>
+                    </div>
+
+                    <!-- Success Step -->
+                    <div class="step success-step">
+                        <h3>Success!</h3>
+                        <div class="success-icon">✓</div>
+                        <p>Your contribution has been registered</p>
+                    </div>
+
+                    <!-- Error Step -->
+                    <div class="step error-step">
+                        <h3>Error</h3>
+                        <div class="error-icon">✗</div>
+                        <p class="error-message">Something went wrong</p>
+                    </div>
+                </div>
+                <button class="close-btn" onclick="closeModal()">×</button>
             </div>
         </div>
 
@@ -381,6 +469,11 @@
             setTimeout(() => {
                 floatingText.remove();
             }, 2000);
+        }
+
+        // Function to close modal
+        function closeModal() {
+            document.querySelector('.workflow-modal').style.display = 'none';
         }
     </script>
 </body>
