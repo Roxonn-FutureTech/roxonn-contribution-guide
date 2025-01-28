@@ -78,114 +78,152 @@ class Web3Service {
         this.tokenContract = null;
     }
 
+    detectXDCPay() {
+        const { ethereum } = window;
+        if (ethereum && ethereum.isXDCPay) {
+            console.log('XDCPay detected');
+            return ethereum;
+        }
+        
+        // Check for legacy web3 injection
+        if (window.web3 && window.web3.currentProvider) {
+            console.log('Legacy web3 provider detected');
+            return window.web3.currentProvider;
+        }
+
+        throw new Error('Please install XDCPay wallet from https://chrome.google.com/webstore/detail/xdcpay/bocpokimicclpaiekenaeelehdjllofo');
+    }
+
     async initialize() {
         try {
-            // Check if XDCPay is installed
-            if (typeof window.ethereum === 'undefined' && typeof window.web3 === 'undefined') {
-                throw new Error('Please install XDCPay wallet');
-            }
-
-            // Use XDCPay's provider
-            const provider = window.ethereum || window.web3.currentProvider;
+            console.log('Initializing Web3Service...');
             
-            // Initialize Web3 with XDC network
+            // Detect XDCPay
+            const provider = this.detectXDCPay();
+            console.log('Provider detected:', provider);
+            
+            // Initialize Web3
             this.web3 = new Web3(provider);
-            
-            // Request account access first
+            console.log('Web3 initialized');
+
+            // Request account access
             try {
-                const accounts = await provider.request({ method: 'eth_requestAccounts' });
+                console.log('Requesting account access...');
+                // Try both methods for better compatibility
+                let accounts;
+                try {
+                    accounts = await provider.request({ 
+                        method: 'eth_requestAccounts',
+                        params: []
+                    });
+                } catch (requestError) {
+                    console.log('Modern request failed, trying enable():', requestError);
+                    accounts = await provider.enable();
+                }
+                
+                if (!accounts || accounts.length === 0) {
+                    throw new Error('No accounts found. Please unlock XDCPay and try again.');
+                }
+                
                 this.account = accounts[0];
                 console.log('Account connected:', this.account);
             } catch (error) {
-                throw new Error('Please connect your XDCPay wallet');
+                console.error('Account access error:', error);
+                if (error.code === -32002) {
+                    throw new Error('XDCPay is already processing a connection request. Please open XDCPay and accept the connection.');
+                }
+                throw new Error('Please unlock XDCPay and try again');
             }
 
-            // Get current network
-            const currentNetwork = await this.web3.eth.net.getId();
-            console.log('Current network:', currentNetwork);
-
-            // If not on XDC network, try to add it first
-            if (currentNetwork.toString() !== this.networkId) {
-                try {
-                    await provider.request({
-                        method: 'wallet_addEthereumChain',
-                        params: [{
-                            chainId: this.chainId,
-                            chainName: 'XDC Apothem Testnet',
-                            nativeCurrency: {
-                                name: 'XDC',
-                                symbol: 'XDC',
-                                decimals: 18
-                            },
-                            rpcUrls: [this.rpcUrl],
-                            blockExplorerUrls: ['https://explorer.apothem.network']
-                        }]
-                    });
-                    console.log('XDC Network added successfully');
-                } catch (addError) {
-                    console.log('Network may already be added:', addError.message);
-                }
-
-                // Now try to switch to XDC network
+            // Get current chain ID
+            const currentChainId = await this.web3.eth.getChainId();
+            console.log('Current chain ID:', currentChainId.toString(16));
+            
+            // Check if we need to switch networks
+            if ('0x' + currentChainId.toString(16) !== this.chainId) {
+                console.log('Wrong network detected. Attempting to switch...');
                 try {
                     await provider.request({
                         method: 'wallet_switchEthereumChain',
                         params: [{ chainId: this.chainId }]
                     });
-                    console.log('Switched to XDC Network');
+                    console.log('Successfully switched to XDC network');
                 } catch (switchError) {
-                    console.error('Failed to switch network:', switchError);
-                    if (switchError.code === 4902) {
-                        throw new Error('Please add XDC Network to your wallet');
+                    console.error('Switch network error:', switchError);
+                    // This error code indicates that the chain has not been added to XDCPay
+                    if (switchError.code === 4902 || switchError.code === -32603) {
+                        console.log('Network not found. Attempting to add XDC network...');
+                        try {
+                            await provider.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: this.chainId,
+                                    chainName: 'XDC Apothem Testnet',
+                                    nativeCurrency: {
+                                        name: 'XDC',
+                                        symbol: 'XDC',
+                                        decimals: 18
+                                    },
+                                    rpcUrls: [this.rpcUrl],
+                                    blockExplorerUrls: ['https://explorer.apothem.network']
+                                }]
+                            });
+                            console.log('XDC network added successfully');
+                        } catch (addError) {
+                            console.error('Add network error:', addError);
+                            throw new Error('Failed to add XDC network. Please add it manually in XDCPay.');
+                        }
                     } else {
-                        throw new Error('Please manually switch to XDC Network in your wallet');
+                        throw new Error('Please switch to XDC Network in XDCPay');
                     }
                 }
             }
 
-            // Verify network one more time
-            const finalNetwork = await this.web3.eth.net.getId();
-            if (finalNetwork.toString() !== this.networkId) {
-                throw new Error('Network switch failed. Please manually select XDC Network in your wallet.');
+            // Verify final network state
+            const finalChainId = await this.web3.eth.getChainId();
+            if ('0x' + finalChainId.toString(16) !== this.chainId) {
+                throw new Error('Failed to switch to XDC Network. Please try again.');
             }
 
-            // Initialize contracts with checksummed addresses
-            const checksummedContractAddress = this.web3.utils.toChecksumAddress(this.contractAddress.replace('xdc', '0x'));
-            const checksummedTokenAddress = this.web3.utils.toChecksumAddress(this.tokenAddress.replace('xdc', '0x'));
-
-            this.contract = new this.web3.eth.Contract(
-                CONTRACT_ABI,
-                checksummedContractAddress
-            );
-
-            this.tokenContract = new this.web3.eth.Contract(
-                TOKEN_ABI,
-                checksummedTokenAddress
-            );
-
-            // Check if user is contract owner
+            // Initialize contracts
             try {
-                const owner = await this.contract.methods.owner().call();
-                console.log('Contract owner:', owner);
-                console.log('Current account:', this.account);
-                this.isOwner = owner.toLowerCase() === this.account.toLowerCase();
-                console.log('Is owner:', this.isOwner);
+                console.log('Initializing contracts...');
+                const checksummedContractAddress = this.web3.utils.toChecksumAddress(this.contractAddress.replace('xdc', '0x'));
+                const checksummedTokenAddress = this.web3.utils.toChecksumAddress(this.tokenAddress.replace('xdc', '0x'));
+
+                this.contract = new this.web3.eth.Contract(
+                    CONTRACT_ABI,
+                    checksummedContractAddress
+                );
+
+                this.tokenContract = new this.web3.eth.Contract(
+                    TOKEN_ABI,
+                    checksummedTokenAddress
+                );
+                console.log('Contracts initialized');
             } catch (error) {
-                console.error('Error checking owner:', error);
+                console.error('Contract initialization error:', error);
+                throw new Error('Failed to initialize contracts. Please try again.');
             }
 
-            // Listen for account changes
+            // Setup event listeners
             if (provider.on) {
                 provider.on('accountsChanged', (accounts) => {
+                    console.log('Account changed:', accounts[0]);
                     this.account = accounts[0];
                     window.location.reload();
                 });
 
-                // Listen for network changes
                 provider.on('chainChanged', (chainId) => {
+                    console.log('Network changed:', chainId);
                     if (chainId !== this.chainId) {
                         alert('Please connect to XDC Network');
                     }
+                    window.location.reload();
+                });
+
+                provider.on('disconnect', () => {
+                    console.log('Wallet disconnected');
                     window.location.reload();
                 });
             }
@@ -225,8 +263,8 @@ class Web3Service {
 
             try {
                 // Verify network again before transaction
-                const network = await this.web3.eth.net.getId();
-                if (network.toString() !== this.networkId) {
+                const network = await this.web3.eth.getChainId();
+                if ('0x' + network.toString(16) !== this.chainId) {
                     throw new Error('Please connect to XDC Network');
                 }
 
