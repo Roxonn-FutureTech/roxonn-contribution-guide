@@ -89,19 +89,52 @@ class Web3Service {
             
             // Initialize Web3 with XDC network
             this.web3 = new Web3(provider);
+
+            // Add XDC Network if not present
+            try {
+                await provider.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [{
+                        chainId: '0x32',  // 50 in hex
+                        chainName: 'XDC Network',
+                        nativeCurrency: {
+                            name: 'XDC',
+                            symbol: 'XDC',
+                            decimals: 18
+                        },
+                        rpcUrls: ['https://erpc.xinfin.network'],
+                        blockExplorerUrls: ['https://explorer.xinfin.network']
+                    }]
+                });
+            } catch (error) {
+                console.log('Network may already be added');
+            }
+
+            // Switch to XDC Network
+            try {
+                await provider.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: '0x32' }], // 50 in hex
+                });
+            } catch (error) {
+                if (error.code === 4902) {
+                    throw new Error('Please add XDC Network to your wallet');
+                }
+                throw new Error('Please switch to XDC Network');
+            }
             
             try {
                 // Request account access
-                const accounts = await provider.enable();
+                const accounts = await provider.request({ method: 'eth_requestAccounts' });
                 this.account = accounts[0];
             } catch (error) {
                 throw new Error('Please connect your XDCPay wallet');
             }
 
-            // Verify network
+            // Verify network again
             const network = await this.web3.eth.net.getId();
             if (network.toString() !== this.networkId) {
-                throw new Error('Please connect to XDC Network');
+                throw new Error('Please switch to XDC Network');
             }
 
             // Initialize contracts with checksummed addresses
