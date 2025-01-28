@@ -206,6 +206,109 @@
             align-items: center;
             justify-content: center;
         }
+
+        .step-container {
+            position: relative;
+            padding-left: 2rem;
+            margin-left: 1rem;
+            border-left: 2px dashed rgba(255,255,255,0.1);
+        }
+
+        .step-container:last-child {
+            border-left: none;
+        }
+
+        .step-number {
+            position: absolute;
+            left: -1rem;
+            width: 2rem;
+            height: 2rem;
+            background: linear-gradient(135deg, #00C2FF 0%, #0047FF 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .reward-calculation {
+            background: linear-gradient(135deg, rgba(0,194,255,0.1) 0%, rgba(0,71,255,0.1) 100%);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 0.5rem;
+        }
+
+        .workflow-container {
+            display: flex;
+            overflow-x: auto;
+            gap: 1rem;
+            padding: 1rem;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .workflow-step {
+            flex: 0 0 300px;
+            scroll-snap-align: start;
+            position: relative;
+        }
+
+        .workflow-step::after {
+            content: '→';
+            position: absolute;
+            right: -1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #00C2FF;
+            font-size: 1.5rem;
+            opacity: 0.5;
+        }
+
+        .workflow-step:last-child::after {
+            display: none;
+        }
+
+        .step-number {
+            width: 2rem;
+            height: 2rem;
+            background: linear-gradient(135deg, #00C2FF 0%, #0047FF 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+
+        .workflow-progress {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 2rem 0;
+        }
+
+        .progress-dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .progress-dot.active {
+            background: #00C2FF;
+            transform: scale(1.5);
+        }
+
+        .code-preview {
+            background: rgba(0,0,0,0.3);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            font-family: monospace;
+            margin-top: 1rem;
+            color: #00ff00;
+        }
     </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-gray-900 to-black text-white">
@@ -217,114 +320,128 @@
                 </span>
                 Demo
             </h1>
-            <button id="wallet-button" class="wallet-btn" onclick="web3Service.init()">
-                Connect Wallet
-            </button>
+            <div class="flex items-center gap-4">
+                <div id="network-status" class="text-sm text-gray-400">
+                    Network: <span class="text-yellow-400">Please connect wallet</span>
+                </div>
+                <button id="wallet-button" class="wallet-btn" onclick="web3Service.init()">
+                    Connect XDCPay
+                </button>
+            </div>
         </div>
     </nav>
 
     <main class="container mx-auto px-4 pt-24 pb-12">
-        <section class="max-w-3xl mx-auto text-center mb-12">
-            <h2 class="text-4xl font-bold mb-4">Contribution Demo</h2>
-            <p class="text-gray-400">
-                This is a demo of the Roxonn contribution platform. Connect your XDC wallet to interact with tasks and earn rewards.
-            </p>
-        </section>
-
-        <section class="max-w-3xl mx-auto space-y-6" id="tasks-container">
-            <div class="glass-card p-6">
-                <div class="flex justify-between items-start mb-4">
-                    <div>
-                        <h3 class="text-xl font-semibold mb-2">Add Dark Mode Support</h3>
-                        <p class="text-gray-400 mb-4">
-                            Implement dark mode support using CSS variables and a theme toggle button.
-                            The implementation should persist user's preference.
-                        </p>
-                        <div class="flex gap-2">
-                            <span class="px-2 py-1 rounded-full text-xs bg-blue-500/10 text-blue-500">UI/UX</span>
-                            <span class="px-2 py-1 rounded-full text-xs bg-green-500/10 text-green-500">Easy</span>
-                        </div>
+        <!-- Workflow Steps -->
+        <div class="workflow-container mb-8">
+            <!-- Step 1: Connect Wallet -->
+            <div class="workflow-step glass-card p-6">
+                <div class="step-number">1</div>
+                <h3 class="text-xl font-bold mb-4">Connect Wallet</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2">
+                        <span class="text-green-400">✓</span>
+                        <p class="text-sm text-gray-400">Install XDCPay Extension</p>
                     </div>
-                    <div class="flex flex-col items-end gap-4">
-                        <span class="task-reward">500 ROXN</span>
-                        <button 
-                            class="btn-primary" 
-                            onclick="handleContribution('task-1')"
-                            data-task-id="task-1"
-                        >
-                            Start Contributing
-                        </button>
+                    <div class="flex items-center gap-2">
+                        <span id="connect-check" class="text-yellow-400">⟳</span>
+                        <p class="text-sm text-gray-400">Connect to Website</p>
                     </div>
+                    <div class="flex items-center gap-2">
+                        <span id="network-check" class="text-yellow-400">⟳</span>
+                        <p class="text-sm text-gray-400">Switch to XDC Testnet</p>
+                    </div>
+                    <button id="connect-wallet-btn" class="btn-primary w-full" onclick="web3Service.init()">
+                        Connect XDCPay
+                    </button>
                 </div>
             </div>
 
-            <div class="glass-card p-6">
-                <div class="flex justify-between items-start mb-4">
-                    <div>
-                        <h3 class="text-xl font-semibold mb-2">Implement Responsive Design</h3>
-                        <p class="text-gray-400 mb-4">
-                            Make the website fully responsive using Tailwind CSS breakpoints.
-                            Should work well on mobile, tablet, and desktop.
-                        </p>
+            <!-- Step 2: Select Task -->
+            <div class="workflow-step glass-card p-6">
+                <div class="step-number">2</div>
+                <h3 class="text-xl font-bold mb-4">Select Task</h3>
+                <div class="space-y-4">
+                    <div class="task-card p-4 bg-black/30 rounded-lg">
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="font-semibold">Add Dark Mode</h4>
+                            <span class="text-green-400">500 ROXN</span>
+                        </div>
+                        <p class="text-sm text-gray-400 mb-2">Implement dark mode support</p>
                         <div class="flex gap-2">
-                            <span class="px-2 py-1 rounded-full text-xs bg-blue-500/10 text-blue-500">UI/UX</span>
-                            <span class="px-2 py-1 rounded-full text-xs bg-yellow-500/10 text-yellow-500">Medium</span>
+                            <span class="px-2 py-1 rounded-full text-xs bg-green-500/10 text-green-400">Easy</span>
                         </div>
                     </div>
-                    <div class="flex flex-col items-end gap-4">
-                        <span class="task-reward">1000 ROXN</span>
-                        <button 
-                            class="btn-primary"
-                            onclick="handleContribution('task-2')"
-                            data-task-id="task-2"
-                        >
-                            Start Contributing
-                        </button>
-                    </div>
+                    <a href="https://github.com/issues" target="_blank" class="text-sm text-blue-400 hover:underline">
+                        View More Tasks →
+                    </a>
                 </div>
             </div>
 
-            <div class="glass-card p-6">
-                <div class="flex justify-between items-start mb-4">
-                    <div>
-                        <h3 class="text-xl font-semibold mb-2">Add Animation Effects</h3>
-                        <p class="text-gray-400 mb-4">
-                            Add smooth animation effects to cards and buttons using CSS transitions
-                            and transforms. Should enhance the user experience.
-                        </p>
-                        <div class="flex gap-2">
-                            <span class="px-2 py-1 rounded-full text-xs bg-blue-500/10 text-blue-500">UI/UX</span>
-                            <span class="px-2 py-1 rounded-full text-xs bg-red-500/10 text-red-500">Hard</span>
-                        </div>
+            <!-- Step 3: Fork & Clone -->
+            <div class="workflow-step glass-card p-6">
+                <div class="step-number">3</div>
+                <h3 class="text-xl font-bold mb-4">Fork & Clone</h3>
+                <div class="space-y-4">
+                    <div class="code-preview text-sm">
+                        <p># Clone repository</p>
+                        <p>git clone https://github.com/you/repo.git</p>
+                        <p># Create branch</p>
+                        <p>git checkout -b feature</p>
                     </div>
-                    <div class="flex flex-col items-end gap-4">
-                        <span class="task-reward">2000 ROXN</span>
-                        <button 
-                            class="btn-primary"
-                            onclick="handleContribution('task-3')"
-                            data-task-id="task-3"
-                        >
-                            Start Contributing
-                        </button>
-                    </div>
+                    <button class="btn-primary w-full" onclick="showWorkflowModal('task-1')">
+                        Start Contributing
+                    </button>
                 </div>
             </div>
-        </section>
 
+            <!-- Step 4: Submit Changes -->
+            <div class="workflow-step glass-card p-6">
+                <div class="step-number">4</div>
+                <h3 class="text-xl font-bold mb-4">Submit Changes</h3>
+                <div class="space-y-4">
+                    <div class="code-preview text-sm">
+                        <p>git add .</p>
+                        <p>git commit -m "feat: add dark mode"</p>
+                        <p>git push origin feature</p>
+                    </div>
+                    <p class="text-sm text-gray-400">Create a pull request to submit your changes</p>
+                </div>
+            </div>
+
+            <!-- Step 5: Register & Earn -->
+            <div class="workflow-step glass-card p-6">
+                <div class="step-number">5</div>
+                <h3 class="text-xl font-bold mb-4">Register & Earn</h3>
+                <div class="space-y-4">
+                    <div class="p-4 bg-blue-500/10 rounded-lg">
+                        <h4 class="font-semibold mb-2">Your Balance</h4>
+                        <div class="text-2xl font-bold" id="token-balance">0 ROXN</div>
+                    </div>
+                    <button class="btn-primary w-full" onclick="web3Service.registerContribution('task-1')">
+                        Register Contribution
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Workflow Progress -->
+        <div class="workflow-progress">
+            <div class="progress-dot active" onclick="scrollToStep(0)"></div>
+            <div class="progress-dot" onclick="scrollToStep(1)"></div>
+            <div class="progress-dot" onclick="scrollToStep(2)"></div>
+            <div class="progress-dot" onclick="scrollToStep(3)"></div>
+            <div class="progress-dot" onclick="scrollToStep(4)"></div>
+        </div>
+
+        <!-- Contribution Modal -->
         <div id="workflow-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50">
             <div class="glass-card max-w-2xl w-full mx-4 p-6">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-xl font-bold">Contributing to Task</h3>
-                    <button onclick="closeWorkflowModal()" class="text-gray-400 hover:text-white">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
+                    <button onclick="closeWorkflowModal()" class="text-gray-400 hover:text-white">×</button>
                 </div>
-                
-                <div class="space-y-6" id="workflow-steps">
-                    <!-- Steps will be added dynamically -->
-                </div>
+                <div class="space-y-6" id="workflow-steps"></div>
             </div>
         </div>
 
@@ -501,6 +618,68 @@
                 button.textContent = 'Start Contributing';
             }
         }
+
+        // Add transaction to recent transactions
+        function addTransaction(hash, amount) {
+            const container = document.getElementById('recent-transactions');
+            const tx = document.createElement('div');
+            tx.className = 'flex justify-between items-center text-gray-400';
+            tx.innerHTML = `
+                <span class="truncate">${hash.substring(0, 10)}...</span>
+                <span class="text-green-400">+${amount} ROXN</span>
+            `;
+            container.insertBefore(tx, container.firstChild);
+        }
+
+        // Update network status
+        function updateNetworkStatus(network) {
+            const status = document.getElementById('network-status');
+            if (network === '51') {
+                status.innerHTML = 'Network: <span class="text-green-400">XDC Apothem Testnet</span>';
+            } else {
+                status.innerHTML = 'Network: <span class="text-yellow-400">Please switch to XDC Testnet</span>';
+            }
+        }
+
+        // Update wallet status
+        function updateWalletStatus(connected) {
+            const status = document.getElementById('wallet-status');
+            if (connected) {
+                status.className = 'text-sm text-green-400';
+                status.textContent = 'Wallet connected successfully!';
+            } else {
+                status.className = 'text-sm text-yellow-400';
+                status.textContent = 'Waiting for wallet connection...';
+            }
+        }
+
+        function scrollToStep(index) {
+            const container = document.querySelector('.workflow-container');
+            const steps = document.querySelectorAll('.workflow-step');
+            const dots = document.querySelectorAll('.progress-dot');
+            
+            if (steps[index]) {
+                steps[index].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+                dots.forEach((dot, i) => {
+                    dot.classList.toggle('active', i === index);
+                });
+            }
+        }
+
+        // Update scroll position on scroll
+        document.querySelector('.workflow-container').addEventListener('scroll', () => {
+            const container = document.querySelector('.workflow-container');
+            const steps = document.querySelectorAll('.workflow-step');
+            const dots = document.querySelectorAll('.progress-dot');
+            
+            const scrollLeft = container.scrollLeft;
+            const stepWidth = steps[0].offsetWidth + 16; // width + gap
+            
+            const currentStep = Math.round(scrollLeft / stepWidth);
+            dots.forEach((dot, i) => {
+                dot.classList.toggle('active', i === currentStep);
+            });
+        });
     </script>
 </body>
 </html>
