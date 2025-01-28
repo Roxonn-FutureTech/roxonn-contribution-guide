@@ -175,17 +175,21 @@ class Web3Service {
             const modal = document.querySelector('.workflow-modal');
             const loadingStep = modal.querySelector('.loading-step');
             const allSteps = modal.querySelectorAll('.step');
+            const submitStep = modal.querySelector('.submit-step');
             
             allSteps.forEach(step => step.classList.remove('active'));
-            if (loadingStep) {
-                loadingStep.classList.add('active');
-            }
+            loadingStep.classList.add('active');
 
             // Get task complexity from the UI
             const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
             const complexity = taskElement.getAttribute('data-complexity') || 'easy';
 
             try {
+                // Update progress dots for transaction
+                const transactionDot = document.querySelector('.step-dot[data-step="5"]');
+                transactionDot.classList.add('active');
+                document.querySelector('.progress-line').style.setProperty('--progress', '100%');
+
                 // Register contribution
                 console.log('Registering contribution...');
                 console.log('Account:', this.account);
@@ -203,51 +207,45 @@ class Web3Service {
 
                 console.log('Contribution registered:', contributionTx);
 
-                // Reward tokens
-                console.log('Rewarding tokens...');
-                const rewardTx = await this.tokenContract.methods.rewardContributor(
-                    this.account,
-                    complexity
-                ).send({
-                    from: this.account,
-                    gas: 200000
-                });
-
-                console.log('Tokens rewarded:', rewardTx);
-
                 // Show success message
                 const successStep = modal.querySelector('.success-step');
                 if (successStep) {
                     allSteps.forEach(step => step.classList.remove('active'));
                     successStep.classList.add('active');
-                    successStep.querySelector('p').textContent = 'Contribution registered and tokens rewarded!';
+                    
+                    // Update transaction details
+                    successStep.querySelector('.transaction-hash').textContent = 
+                        `Transaction: ${contributionTx.transactionHash.substring(0, 10)}...`;
+                    
+                    const rewardAmount = complexity === 'hard' ? '300' : complexity === 'medium' ? '200' : '100';
+                    successStep.querySelector('.tokens-earned').textContent = 
+                        `+${rewardAmount} ROXN tokens will be sent to your wallet`;
                 }
 
                 return contributionTx.transactionHash;
             } catch (error) {
                 console.error('Transaction error:', error);
+                
+                // Show error in the modal
+                const errorStep = modal.querySelector('.error-step');
+                if (errorStep) {
+                    allSteps.forEach(step => step.classList.remove('active'));
+                    errorStep.classList.add('active');
+                    
+                    // Format the error message
+                    let errorMessage = error.message || 'Failed to register contribution';
+                    if (errorMessage.includes('onlyOwner')) {
+                        errorMessage = 'Only the contract owner can register contributions';
+                    } else if (errorMessage.includes('user rejected')) {
+                        errorMessage = 'Transaction was rejected. Please try again.';
+                    }
+                    errorStep.querySelector('.error-message').textContent = errorMessage;
+                }
+
                 throw error;
             }
         } catch (error) {
             console.error('Error registering contribution:', error);
-            
-            // Show error in the modal
-            const modal = document.querySelector('.workflow-modal');
-            const errorStep = modal.querySelector('.error-step');
-            const allSteps = modal.querySelectorAll('.step');
-            
-            if (errorStep) {
-                allSteps.forEach(step => step.classList.remove('active'));
-                errorStep.classList.add('active');
-                
-                // Format the error message
-                let errorMessage = error.message || 'Failed to register contribution';
-                if (errorMessage.includes('onlyOwner')) {
-                    errorMessage = 'Only the contract owner can register contributions';
-                }
-                errorStep.querySelector('.error-message').textContent = errorMessage;
-            }
-
             throw error;
         }
     }

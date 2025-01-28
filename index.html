@@ -99,6 +99,97 @@
             font-size: 48px;
             margin: 2rem 0;
         }
+
+        /* Steps Progress */
+        .steps-progress {
+            position: relative;
+            padding: 0 20px;
+        }
+
+        .progress-line {
+            position: absolute;
+            top: 15px;
+            left: 40px;
+            right: 40px;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            z-index: 1;
+        }
+
+        .progress-line::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 0;
+            background: #3b82f6;
+            transition: width 0.3s ease;
+        }
+
+        .step-dot {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+        }
+
+        .step-dot .dot {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            margin: 0 auto 8px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .step-dot.active .dot {
+            background: #3b82f6;
+            border-color: #fff;
+        }
+
+        .step-dot .label {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .step-dot.active .label {
+            color: white;
+        }
+
+        /* Code Block */
+        .code-block {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .code-header {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .copy-btn {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .command-text {
+            padding: 16px;
+            margin: 0;
+            font-family: monospace;
+            color: #10b981;
+            white-space: pre;
+            overflow-x: auto;
+        }
     </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-gray-900 to-black text-white">
@@ -186,7 +277,34 @@
 
         <!-- Workflow Modal -->
         <div class="workflow-modal hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div class="modal-content glass-card p-8 max-w-md w-full mx-4">
+            <div class="modal-content glass-card p-8 max-w-2xl w-full mx-4">
+                <!-- Steps Progress -->
+                <div class="steps-progress mb-8">
+                    <div class="flex justify-between">
+                        <div class="step-dot active" data-step="1">
+                            <div class="dot"></div>
+                            <span class="label">Start</span>
+                        </div>
+                        <div class="step-dot" data-step="2">
+                            <div class="dot"></div>
+                            <span class="label">Clone</span>
+                        </div>
+                        <div class="step-dot" data-step="3">
+                            <div class="dot"></div>
+                            <span class="label">Code</span>
+                        </div>
+                        <div class="step-dot" data-step="4">
+                            <div class="dot"></div>
+                            <span class="label">Submit</span>
+                        </div>
+                        <div class="step-dot" data-step="5">
+                            <div class="dot"></div>
+                            <span class="label">Reward</span>
+                        </div>
+                    </div>
+                    <div class="progress-line"></div>
+                </div>
+
                 <div class="steps-container">
                     <!-- Initial Step -->
                     <div class="step initial-step active">
@@ -197,10 +315,77 @@
                                 <span>Reward:</span>
                                 <span class="current-reward">100 ROXN</span>
                             </div>
-                            <button onclick="handleContribution(this)" class="contribute-btn w-full">
-                                Confirm
+                            <div class="text-left text-sm text-gray-400 mb-4">
+                                <p class="mb-2">You'll need to:</p>
+                                <ul class="list-disc list-inside space-y-1">
+                                    <li>Clone the repository</li>
+                                    <li>Create a new branch</li>
+                                    <li>Make the required changes</li>
+                                    <li>Submit a pull request</li>
+                                    <li>Register your contribution</li>
+                                </ul>
+                            </div>
+                            <button onclick="startContributionFlow(this)" class="contribute-btn w-full">
+                                Let's Begin
                             </button>
                         </div>
+                    </div>
+
+                    <!-- Clone Step -->
+                    <div class="step clone-step">
+                        <h3 class="text-2xl font-bold mb-4">Clone Repository</h3>
+                        <div class="code-block mb-6">
+                            <div class="code-header flex justify-between items-center">
+                                <span>Terminal</span>
+                                <button onclick="copyCode(this)" class="copy-btn">Copy</button>
+                            </div>
+                            <pre class="command-text"><code>git clone https://github.com/roxonn/roxonn-website.git
+cd roxonn-website
+git checkout -b feature/task-<span class="task-number">1</span></code></pre>
+                        </div>
+                        <p class="text-gray-300 mb-4">Clone the repository and create a new branch for your changes.</p>
+                        <button onclick="nextStep()" class="contribute-btn w-full">
+                            Next Step
+                        </button>
+                    </div>
+
+                    <!-- Code Step -->
+                    <div class="step code-step">
+                        <h3 class="text-2xl font-bold mb-4">Make Changes</h3>
+                        <div class="code-block mb-6">
+                            <div class="code-header">
+                                <span>Commit your changes</span>
+                            </div>
+                            <pre class="command-text"><code>git add .
+git commit -m "feat: implement task-<span class="task-number">1</span>"
+git push origin feature/task-<span class="task-number">1</span></code></pre>
+                        </div>
+                        <p class="text-gray-300 mb-4">Make your changes and commit them to your branch.</p>
+                        <button onclick="nextStep()" class="contribute-btn w-full">
+                            Next Step
+                        </button>
+                    </div>
+
+                    <!-- Submit Step -->
+                    <div class="step submit-step">
+                        <h3 class="text-2xl font-bold mb-4">Submit Pull Request</h3>
+                        <div class="text-left mb-6">
+                            <p class="text-gray-300 mb-4">Create a pull request with the following details:</p>
+                            <div class="glass-card p-4 mb-4">
+                                <h4 class="font-bold mb-2">Title</h4>
+                                <p class="text-gray-400">feat: Implement task-<span class="task-number">1</span></p>
+                                
+                                <h4 class="font-bold mt-4 mb-2">Description</h4>
+                                <p class="text-gray-400">
+                                    - What changes were made<br>
+                                    - How to test the changes<br>
+                                    - Any additional notes
+                                </p>
+                            </div>
+                        </div>
+                        <button onclick="handleContribution(this)" class="contribute-btn w-full">
+                            Register Contribution
+                        </button>
                     </div>
 
                     <!-- Loading Step -->
@@ -214,8 +399,14 @@
                     <div class="step success-step">
                         <h3 class="text-2xl font-bold mb-4">Success!</h3>
                         <div class="success-icon">✓</div>
-                        <p class="text-gray-300">Your contribution has been registered</p>
-                        <button onclick="closeModal()" class="contribute-btn w-full mt-6">
+                        <div class="glass-card p-4 mb-6">
+                            <h4 class="font-bold mb-2">Contribution Registered</h4>
+                            <p class="text-gray-300 transaction-hash"></p>
+                            <div class="mt-4">
+                                <p class="text-green-400 font-bold tokens-earned"></p>
+                            </div>
+                        </div>
+                        <button onclick="closeModal()" class="contribute-btn w-full">
                             Close
                         </button>
                     </div>
@@ -230,41 +421,117 @@
                         </button>
                     </div>
                 </div>
+
                 <button class="close-btn absolute top-4 right-4 text-gray-500 hover:text-white" onclick="closeModal()">×</button>
             </div>
         </div>
 
         <script>
-            // Show workflow modal
+            // Show workflow modal with task info
             function showWorkflow(button) {
                 const taskCard = button.closest('.task-card');
+                const taskId = taskCard.getAttribute('data-task-id');
                 const complexity = taskCard.getAttribute('data-complexity');
                 const modal = document.querySelector('.workflow-modal');
+                
+                // Update all task numbers in the modal
+                modal.querySelectorAll('.task-number').forEach(el => {
+                    el.textContent = taskId.replace('task-', '');
+                });
                 
                 // Update reward amount based on complexity
                 const rewardAmount = complexity === 'hard' ? '300' : complexity === 'medium' ? '200' : '100';
                 modal.querySelector('.current-reward').textContent = `${rewardAmount} ROXN`;
                 
-                // Store task ID on the confirm button
-                const confirmButton = modal.querySelector('.initial-step button');
-                confirmButton.setAttribute('data-task-id', taskCard.getAttribute('data-task-id'));
+                // Store task info on confirm button
+                const confirmButton = modal.querySelector('.submit-step button');
+                confirmButton.setAttribute('data-task-id', taskId);
                 
                 // Show modal
                 modal.classList.remove('hidden');
                 
                 // Reset to initial step
-                const steps = modal.querySelectorAll('.step');
-                steps.forEach(step => step.classList.remove('active'));
-                modal.querySelector('.initial-step').classList.add('active');
+                resetSteps();
             }
 
-            // Handle contribution
+            // Reset all steps
+            function resetSteps() {
+                const steps = document.querySelectorAll('.step');
+                const dots = document.querySelectorAll('.step-dot');
+                
+                steps.forEach(step => step.classList.remove('active'));
+                dots.forEach(dot => dot.classList.remove('active'));
+                
+                document.querySelector('.initial-step').classList.add('active');
+                document.querySelector('.step-dot[data-step="1"]').classList.add('active');
+                
+                // Reset progress line
+                updateProgressLine(1);
+            }
+
+            // Start contribution flow
+            function startContributionFlow(button) {
+                nextStep();
+            }
+
+            // Move to next step
+            function nextStep() {
+                const currentStep = document.querySelector('.step.active');
+                const currentDot = document.querySelector('.step-dot.active');
+                const currentStepNumber = parseInt(currentDot.getAttribute('data-step'));
+                const nextStepNumber = currentStepNumber + 1;
+                
+                // Update progress dots
+                currentDot.classList.remove('active');
+                const nextDot = document.querySelector(`.step-dot[data-step="${nextStepNumber}"]`);
+                if (nextDot) nextDot.classList.add('active');
+                
+                // Update progress line
+                updateProgressLine(nextStepNumber);
+                
+                // Show next step
+                currentStep.classList.remove('active');
+                const steps = ['initial-step', 'clone-step', 'code-step', 'submit-step', 'loading-step'];
+                const nextStep = document.querySelector(`.${steps[currentStepNumber]}`);
+                if (nextStep) nextStep.classList.add('active');
+            }
+
+            // Update progress line
+            function updateProgressLine(step) {
+                const progress = (step - 1) * 25;
+                document.querySelector('.progress-line').style.setProperty('--progress', `${progress}%`);
+            }
+
+            // Copy code to clipboard
+            function copyCode(button) {
+                const codeBlock = button.closest('.code-block');
+                const code = codeBlock.querySelector('code').textContent;
+                
+                navigator.clipboard.writeText(code).then(() => {
+                    button.textContent = 'Copied!';
+                    setTimeout(() => {
+                        button.textContent = 'Copy';
+                    }, 2000);
+                });
+            }
+
+            // Handle contribution registration
             async function handleContribution(button) {
                 const taskId = button.getAttribute('data-task-id');
                 button.disabled = true;
                 
                 try {
-                    await web3Service.registerContribution(taskId);
+                    const txHash = await web3Service.registerContribution(taskId);
+                    
+                    // Show success step with transaction details
+                    const successStep = document.querySelector('.success-step');
+                    successStep.querySelector('.transaction-hash').textContent = `TX: ${txHash.substring(0, 10)}...`;
+                    
+                    const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
+                    const complexity = taskCard.getAttribute('data-complexity');
+                    const rewardAmount = complexity === 'hard' ? '300' : complexity === 'medium' ? '200' : '100';
+                    successStep.querySelector('.tokens-earned').textContent = `+${rewardAmount} ROXN earned!`;
+                    
                 } catch (error) {
                     console.error(error);
                 } finally {
@@ -287,6 +554,10 @@
                         closeModal();
                     }
                 });
+
+                // Add progress line animation
+                const progressLine = document.querySelector('.progress-line');
+                progressLine.style.setProperty('--progress', '0%');
             });
         </script>
     </main>
