@@ -77,16 +77,23 @@ class Web3Service {
     async initialize() {
         try {
             // Check if XDCPay is installed
-            if (typeof window.ethereum === 'undefined') {
+            if (typeof window.ethereum === 'undefined' && typeof window.web3 === 'undefined') {
                 throw new Error('Please install XDCPay wallet');
             }
 
-            // Initialize Web3 with XDC network
-            this.web3 = new Web3(window.ethereum);
+            // Use XDCPay's provider
+            const provider = window.ethereum || window.web3.currentProvider;
             
-            // Request account access
-            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-            this.account = accounts[0];
+            // Initialize Web3 with XDC network
+            this.web3 = new Web3(provider);
+            
+            try {
+                // Request account access
+                const accounts = await provider.enable();
+                this.account = accounts[0];
+            } catch (error) {
+                throw new Error('Please connect your XDCPay wallet');
+            }
 
             // Verify network
             const network = await this.web3.eth.net.getId();
@@ -120,18 +127,20 @@ class Web3Service {
             }
 
             // Listen for account changes
-            window.ethereum.on('accountsChanged', (accounts) => {
-                this.account = accounts[0];
-                window.location.reload();
-            });
+            if (provider.on) {
+                provider.on('accountsChanged', (accounts) => {
+                    this.account = accounts[0];
+                    window.location.reload();
+                });
 
-            // Listen for network changes
-            window.ethereum.on('networkChanged', (networkId) => {
-                if (networkId.toString() !== this.networkId) {
-                    alert('Please connect to XDC Network');
-                }
-                window.location.reload();
-            });
+                // Listen for network changes
+                provider.on('networkChanged', (networkId) => {
+                    if (networkId.toString() !== this.networkId) {
+                        alert('Please connect to XDC Network');
+                    }
+                    window.location.reload();
+                });
+            }
 
             return true;
         } catch (error) {

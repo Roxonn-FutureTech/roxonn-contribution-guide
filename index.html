@@ -205,7 +205,7 @@
                 <div id="network-status" class="text-sm text-gray-400">
                     Network: <span class="text-yellow-400">Please connect wallet</span>
                 </div>
-                <button onclick="web3Service.initialize().then(() => updateWalletUI()).catch(error => handleError(error))" class="connect-wallet-btn">
+                <button onclick="web3Service.initialize().then(updateWalletUI).catch(handleWalletError)" class="connect-wallet-btn">
                     Connect Wallet
                 </button>
             </div>
@@ -492,6 +492,33 @@ git push origin feature/task-<span class="task-number">1</span></code></pre>
         </div>
 
         <script>
+            // Error handling function
+            function handleWalletError(error) {
+                const errorMessage = error.message || 'Failed to connect wallet';
+                alert(errorMessage);
+                console.error('Wallet error:', error);
+            }
+
+            // Update wallet UI
+            function updateWalletUI() {
+                const walletBtn = document.querySelector('.connect-wallet-btn');
+                const networkStatus = document.getElementById('network-status');
+                
+                if (web3Service.account) {
+                    const shortAddress = `${web3Service.account.slice(0, 6)}...${web3Service.account.slice(-4)}`;
+                    walletBtn.textContent = shortAddress;
+                    walletBtn.classList.add('connected');
+                    networkStatus.innerHTML = 'Network: <span class="text-green-400">XDC Network</span>';
+                } else {
+                    walletBtn.textContent = 'Connect Wallet';
+                    walletBtn.classList.remove('connected');
+                    networkStatus.innerHTML = 'Network: <span class="text-yellow-400">Please connect wallet</span>';
+                }
+            }
+
+            // Initialize web3 service
+            const web3Service = new Web3Service();
+
             // Show workflow modal with task info
             function showWorkflow(button) {
                 const taskCard = button.closest('.task-card');
