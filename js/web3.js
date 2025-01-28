@@ -1,4 +1,6 @@
 const CONTRACT_ADDRESS = '0x2b0f01390349128e9aB9d90348d93Ecec46E6079';
+const TOKEN_ADDRESS = '0x8AEB0d898cA8Bb38da27d5196890EC36552380f0';
+
 const CONTRACT_ABI = [
     {
         "inputs": [
@@ -59,8 +61,6 @@ const TOKEN_ABI = [
     }
 ];
 
-const TOKEN_ADDRESS = '0x...'; // Replace with the actual token contract address
-
 class Web3Service {
     constructor() {
         this.web3 = null;
@@ -110,17 +110,23 @@ class Web3Service {
                 await this.switchToXDCTestnet();
             }
 
-            // Initialize contracts
-            this.contract = new this.web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-            this.tokenContract = new this.web3.eth.Contract(TOKEN_ABI, TOKEN_ADDRESS);
-
-            // Check if user is contract owner
+            // Initialize contracts with checksummed addresses
             try {
+                const checksummedContractAddress = this.web3.utils.toChecksumAddress(CONTRACT_ADDRESS);
+                const checksummedTokenAddress = this.web3.utils.toChecksumAddress(TOKEN_ADDRESS);
+                
+                this.contract = new this.web3.eth.Contract(CONTRACT_ABI, checksummedContractAddress);
+                this.tokenContract = new this.web3.eth.Contract(TOKEN_ABI, checksummedTokenAddress);
+
+                // Check if user is contract owner
                 const owner = await this.contract.methods.owner().call();
                 this.isOwner = owner.toLowerCase() === this.account.toLowerCase();
+                console.log('Contract owner:', owner);
+                console.log('Current account:', this.account);
+                console.log('Is owner:', this.isOwner);
             } catch (error) {
-                console.warn('Could not check owner status:', error);
-                this.isOwner = false;
+                console.error('Contract initialization error:', error);
+                throw new Error('Failed to initialize contracts. Please check contract addresses.');
             }
 
             // Update wallet button
@@ -161,6 +167,10 @@ class Web3Service {
                 throw new Error('Please connect your wallet first');
             }
 
+            if (!this.contract || !this.tokenContract) {
+                throw new Error('Contracts not initialized. Please refresh the page.');
+            }
+
             // Show loading state
             const modal = document.querySelector('.workflow-modal');
             const loadingStep = modal.querySelector('.loading-step');
@@ -175,38 +185,49 @@ class Web3Service {
             const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
             const complexity = taskElement.getAttribute('data-complexity') || 'easy';
 
-            // Register contribution
-            const contributionTx = await this.contract.methods.registerContribution(
-                this.account,
-                `GH-${taskId.replace('task-', '')}`,
-                complexity
-            ).send({ 
-                from: this.account,
-                gas: 200000
-            });
+            try {
+                // Register contribution
+                console.log('Registering contribution...');
+                console.log('Account:', this.account);
+                console.log('Task ID:', `GH-${taskId.replace('task-', '')}`);
+                console.log('Complexity:', complexity);
 
-            console.log('Contribution registered:', contributionTx);
+                const contributionTx = await this.contract.methods.registerContribution(
+                    this.account,
+                    `GH-${taskId.replace('task-', '')}`,
+                    complexity
+                ).send({ 
+                    from: this.account,
+                    gas: 200000
+                });
 
-            // Reward tokens
-            const rewardTx = await this.tokenContract.methods.rewardContributor(
-                this.account,
-                complexity
-            ).send({
-                from: this.account,
-                gas: 200000
-            });
+                console.log('Contribution registered:', contributionTx);
 
-            console.log('Tokens rewarded:', rewardTx);
+                // Reward tokens
+                console.log('Rewarding tokens...');
+                const rewardTx = await this.tokenContract.methods.rewardContributor(
+                    this.account,
+                    complexity
+                ).send({
+                    from: this.account,
+                    gas: 200000
+                });
 
-            // Show success message
-            const successStep = modal.querySelector('.success-step');
-            if (successStep) {
-                allSteps.forEach(step => step.classList.remove('active'));
-                successStep.classList.add('active');
-                successStep.querySelector('p').textContent = 'Contribution registered and tokens rewarded!';
+                console.log('Tokens rewarded:', rewardTx);
+
+                // Show success message
+                const successStep = modal.querySelector('.success-step');
+                if (successStep) {
+                    allSteps.forEach(step => step.classList.remove('active'));
+                    successStep.classList.add('active');
+                    successStep.querySelector('p').textContent = 'Contribution registered and tokens rewarded!';
+                }
+
+                return contributionTx.transactionHash;
+            } catch (error) {
+                console.error('Transaction error:', error);
+                throw error;
             }
-
-            return contributionTx.transactionHash;
         } catch (error) {
             console.error('Error registering contribution:', error);
             
