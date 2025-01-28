@@ -3,173 +3,231 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roxonn Contribution Demo</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>Roxonn Contribution Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+    <script src="js/web3.js" defer></script>
     <style>
-        @keyframes tokenTransfer {
-            0% { transform: translateX(0) scale(1); opacity: 1; }
-            50% { transform: translateX(100px) scale(1.2); opacity: 0.8; }
-            100% { transform: translateX(200px) scale(1); opacity: 0; }
-        }
-        .token-animation {
-            animation: tokenTransfer 1.5s ease-in-out;
-        }
         .glass-card {
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 1rem;
+            transition: all 0.3s ease;
         }
-        body {
-            background: linear-gradient(135deg, #13151a 0%, #1e2127 100%);
-            min-height: 100vh;
+
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00C2FF 0%, #0047FF 100%);
             color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .wallet-btn {
+            background: rgba(0, 194, 255, 0.1);
+            color: #00C2FF;
+            border: 1px solid #00C2FF;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .wallet-btn.connected {
+            background: rgba(0, 194, 255, 0.2);
+        }
+
+        .wallet-btn:hover {
+            background: rgba(0, 194, 255, 0.2);
+        }
+
+        .task-reward {
+            background: rgba(0, 194, 255, 0.1);
+            color: #00C2FF;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .loading {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
-<body class="p-8">
-    <div class="max-w-6xl mx-auto">
-        <!-- Header -->
-        <div class="text-center mb-12">
-            <h1 class="text-4xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-[#00C2FF] to-[#7000FF]">
-                Roxonn Contribution Demo
+<body class="min-h-screen bg-gradient-to-br from-gray-900 to-black text-white">
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-lg border-b border-white/10">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold">
+                <span class="bg-clip-text text-transparent bg-gradient-to-r from-[#00C2FF] to-[#0047FF]">
+                    Roxonn
+                </span>
+                Demo
             </h1>
-            <p class="text-gray-400">Experience how contributing earns you ROXN tokens</p>
+            <button id="wallet-button" class="wallet-btn" onclick="web3Service.init()">
+                Connect Wallet
+            </button>
         </div>
+    </nav>
 
-        <!-- Demo Sections -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <!-- Issues Section -->
-            <div class="glass-card rounded-xl p-6">
-                <h2 class="text-2xl font-semibold mb-4 flex items-center">
-                    <i class="fas fa-exclamation-circle text-[#00C2FF] mr-2"></i>
-                    Available Issues
-                </h2>
-                <div class="space-y-4" id="issuesList">
-                    <!-- Issues will be populated by JavaScript -->
-                </div>
-            </div>
+    <main class="container mx-auto px-4 pt-24 pb-12">
+        <section class="max-w-3xl mx-auto text-center mb-12">
+            <h2 class="text-4xl font-bold mb-4">Contribution Demo</h2>
+            <p class="text-gray-400">
+                This is a demo of the Roxonn contribution platform. Connect your XDC wallet to interact with tasks and earn rewards.
+            </p>
+        </section>
 
-            <!-- Simulation Section -->
-            <div class="glass-card rounded-xl p-6">
-                <h2 class="text-2xl font-semibold mb-4 flex items-center">
-                    <i class="fas fa-play-circle text-[#00C2FF] mr-2"></i>
-                    Live Simulation
-                </h2>
-                <div id="simulationArea" class="space-y-4">
-                    <div class="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
-                        <span id="currentStep">Select an issue to start</span>
-                        <span id="tokenBalance" class="text-[#00C2FF]">Balance: 0 ROXN</span>
+        <section class="max-w-3xl mx-auto space-y-6" id="tasks-container">
+            <div class="glass-card p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-xl font-semibold mb-2">Add Dark Mode Support</h3>
+                        <p class="text-gray-400 mb-4">
+                            Implement dark mode support using CSS variables and a theme toggle button.
+                            The implementation should persist user's preference.
+                        </p>
+                        <div class="flex gap-2">
+                            <span class="px-2 py-1 rounded-full text-xs bg-blue-500/10 text-blue-500">UI/UX</span>
+                            <span class="px-2 py-1 rounded-full text-xs bg-green-500/10 text-green-500">Easy</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-end gap-4">
+                        <span class="task-reward">500 ROXN</span>
+                        <button 
+                            class="btn-primary" 
+                            onclick="handleContribution('task-1')"
+                            data-task-id="task-1"
+                        >
+                            Start Contributing
+                        </button>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Wallet Section -->
-        <div class="mt-8 glass-card rounded-xl p-6">
-            <h2 class="text-2xl font-semibold mb-4 flex items-center">
-                <i class="fas fa-wallet text-[#00C2FF] mr-2"></i>
-                Your ROXN Wallet
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-gray-800 rounded-lg p-4">
-                    <div class="text-gray-400">Total Earned</div>
-                    <div class="text-2xl font-bold text-[#00C2FF]" id="totalEarned">0 ROXN</div>
-                </div>
-                <div class="bg-gray-800 rounded-lg p-4">
-                    <div class="text-gray-400">Contributions</div>
-                    <div class="text-2xl font-bold text-[#00C2FF]" id="totalContributions">0</div>
-                </div>
-                <div class="bg-gray-800 rounded-lg p-4">
-                    <div class="text-gray-400">Value (₹)</div>
-                    <div class="text-2xl font-bold text-[#00C2FF]" id="inrValue">₹0</div>
+            <div class="glass-card p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-xl font-semibold mb-2">Implement Responsive Design</h3>
+                        <p class="text-gray-400 mb-4">
+                            Make the website fully responsive using Tailwind CSS breakpoints.
+                            Should work well on mobile, tablet, and desktop.
+                        </p>
+                        <div class="flex gap-2">
+                            <span class="px-2 py-1 rounded-full text-xs bg-blue-500/10 text-blue-500">UI/UX</span>
+                            <span class="px-2 py-1 rounded-full text-xs bg-yellow-500/10 text-yellow-500">Medium</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-end gap-4">
+                        <span class="task-reward">1000 ROXN</span>
+                        <button 
+                            class="btn-primary"
+                            onclick="handleContribution('task-2')"
+                            data-task-id="task-2"
+                        >
+                            Start Contributing
+                        </button>
+                    </div>
                 </div>
             </div>
+
+            <div class="glass-card p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-xl font-semibold mb-2">Add Animation Effects</h3>
+                        <p class="text-gray-400 mb-4">
+                            Add smooth animation effects to cards and buttons using CSS transitions
+                            and transforms. Should enhance the user experience.
+                        </p>
+                        <div class="flex gap-2">
+                            <span class="px-2 py-1 rounded-full text-xs bg-blue-500/10 text-blue-500">UI/UX</span>
+                            <span class="px-2 py-1 rounded-full text-xs bg-red-500/10 text-red-500">Hard</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-end gap-4">
+                        <span class="task-reward">2000 ROXN</span>
+                        <button 
+                            class="btn-primary"
+                            onclick="handleContribution('task-3')"
+                            data-task-id="task-3"
+                        >
+                            Start Contributing
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="fixed bottom-4 right-4 hidden">
+            <div class="glass-card p-4 flex items-center gap-3">
+                <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <p id="toast-message" class="text-sm"></p>
+            </div>
         </div>
-    </div>
+    </main>
 
     <script>
-        const issues = [
-            {
-                id: 1,
-                title: "Fix Documentation Typo",
-                type: "minor-bug",
-                reward: 10,
-                steps: ["Fork Repository", "Fix Typo", "Create PR", "Get Merged"]
-            },
-            {
-                id: 2,
-                title: "Fix Login Function",
-                type: "major-bug",
-                reward: 50,
-                steps: ["Fork Repository", "Debug Issue", "Implement Fix", "Add Tests", "Create PR", "Get Merged"]
-            },
-            {
-                id: 3,
-                title: "Add Dark Mode",
-                type: "feature",
-                reward: 100,
-                steps: ["Fork Repository", "Design Feature", "Implement", "Add Tests", "Create PR", "Get Merged"]
-            }
-        ];
-
-        let currentBalance = 0;
-        let totalContributions = 0;
-
-        function updateWallet(amount) {
-            currentBalance += amount;
-            totalContributions++;
-            document.getElementById('totalEarned').textContent = `${currentBalance} ROXN`;
-            document.getElementById('totalContributions').textContent = totalContributions;
-            document.getElementById('inrValue').textContent = `₹${currentBalance * 3}`;
-            document.getElementById('tokenBalance').textContent = `Balance: ${currentBalance} ROXN`;
+        // Toast notification
+        function showToast(message, duration = 3000) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            
+            toastMessage.textContent = message;
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, duration);
         }
 
-        function simulateContribution(issue) {
-            const simulationArea = document.getElementById('simulationArea');
-            let currentStepIndex = 0;
-
-            function nextStep() {
-                if (currentStepIndex < issue.steps.length) {
-                    document.getElementById('currentStep').textContent = 
-                        `${issue.steps[currentStepIndex]} (${currentStepIndex + 1}/${issue.steps.length})`;
-                    currentStepIndex++;
-                    setTimeout(nextStep, 1500);
-                } else {
-                    // Simulate token transfer
-                    const token = document.createElement('div');
-                    token.className = 'token-animation';
-                    token.innerHTML = '<i class="fas fa-coins text-[#00C2FF] text-2xl"></i>';
-                    simulationArea.appendChild(token);
-
-                    setTimeout(() => {
-                        updateWallet(issue.reward);
-                        token.remove();
-                        document.getElementById('currentStep').textContent = 'Contribution Complete! 🎉';
-                    }, 1500);
-                }
+        // Handle contribution button click
+        async function handleContribution(taskId) {
+            const button = document.querySelector(`[data-task-id="${taskId}"]`);
+            
+            try {
+                button.disabled = true;
+                button.innerHTML = '<svg class="loading w-5 h-5" viewBox="0 0 24 24"><path fill="currentColor" d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"></path></svg>';
+                
+                const tx = await web3Service.registerContribution(taskId);
+                
+                showToast('Contribution registered successfully! Transaction: ' + tx.substring(0, 10) + '...');
+                
+                // Update button state
+                button.textContent = 'Contributed';
+                button.disabled = true;
+                button.classList.add('opacity-50');
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error: ' + (error.message || 'Failed to register contribution'));
+                button.disabled = false;
+                button.textContent = 'Start Contributing';
             }
-
-            nextStep();
         }
-
-        // Populate issues
-        const issuesList = document.getElementById('issuesList');
-        issues.forEach(issue => {
-            const issueElement = document.createElement('div');
-            issueElement.className = 'bg-gray-800 rounded-lg p-4 cursor-pointer hover:bg-gray-700 transition';
-            issueElement.innerHTML = `
-                <div class="flex justify-between items-center">
-                    <div>
-                        <h3 class="font-semibold">${issue.title}</h3>
-                        <span class="text-sm text-gray-400">${issue.type}</span>
-                    </div>
-                    <div class="text-[#00C2FF]">${issue.reward} ROXN</div>
-                </div>
-            `;
-            issueElement.onclick = () => simulateContribution(issue);
-            issuesList.appendChild(issueElement);
-        });
     </script>
 </body>
 </html>

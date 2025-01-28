@@ -69,4 +69,64 @@ Roxonn is a Decentralized Software Organization (DSO) where contributors earn RO
 5. Get PR merged
 6. Receive 10 ROXN tokens
 
+## Roxonn Contribution Demo
+
+This repository contains a demo implementation of the Roxonn contribution platform, showcasing how contributors can earn ROXN tokens for their work.
+
+### Features
+
+- 🔗 XDC Wallet Integration
+- 💰 Smart Contract for Token Distribution
+- 🎯 Sample Tasks with Different Difficulty Levels
+- 🌟 Interactive UI with Animations
+- 📱 Responsive Design
+
+### Getting Started
+
+1. Install XDCPay extension in your browser
+   - Visit [XDCPay Chrome Extension](https://chrome.google.com/webstore/detail/xdcpay/bocpokimicclpaiekenaeelehdjllofo)
+   - Follow installation instructions
+
+2. Set up XDCPay
+   - Create a new wallet or import existing
+   - Switch to Apothem Testnet
+   - Get some test XDC from [XDC Faucet](https://faucet.apothem.network/)
+
+3. Run the Demo
+   - Clone this repository
+   - Open `index.html` in your browser
+   - Connect your XDCPay wallet
+   - Start interacting with tasks!
+
+### Smart Contract
+
+The demo uses a simple smart contract deployed on XDC Apothem Testnet:
+
+```solidity
+contract RoxonnDemo {
+    // Register contribution and earn ROXN tokens
+    function registerContribution(string taskId) public {
+        // Check task validity
+        // Transfer tokens
+        // Emit event
+    }
+
+    // Claim accumulated rewards
+    function claimReward() public {
+        // Transfer accumulated rewards
+        // Reset balance
+    }
+}
+```
+
+### Contributing
+
+This is a demo repository. For actual contributions to Roxonn, please visit:
+- [Roxonn Organization](https://github.com/Roxonn-FutureTech)
+- [Contribution Guide](https://github.com/Roxonn-FutureTech/roxonn-contribution-guide)
+
+### License
+
+MIT License - feel free to use this demo for learning purposes!
+
 Ready to start? Check out our projects and earn your first ROXN tokens today! 🚀

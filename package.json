@@ -1,0 +1,29 @@
+{
+  "name": "roxonn-contribution-guide",
+  "version": "1.0.0",
+  "description": "Demo implementation of Roxonn contribution platform",
+  "main": "index.js",
+  "scripts": {
+    "deploy": "node scripts/deploy.js"
+  },
+  "dependencies": {
+    "web3": "^1.9.0",
+    "solc": "^0.8.19",
+    "dotenv": "^16.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^18.15.11"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Roxonn-FutureTech/roxonn-contribution-guide.git"
+  },
+  "keywords": [
+    "roxonn",
+    "blockchain",
+    "xdc",
+    "contribution"
+  ],
+  "author": "Roxonn FutureTech",
+  "license": "MIT"
+}
