@@ -80,22 +80,14 @@ class Web3Service {
     }
 
     async detectProvider() {
-        let provider;
-        
         // Check for XDCPay
-        if (typeof window.ethereum !== 'undefined' && window.ethereum.isXDCPay) {
-            provider = window.ethereum;
-        }
-        // Check for other Web3 providers
-        else if (typeof window.ethereum !== 'undefined') {
-            provider = window.ethereum;
-        }
-        // No provider found
-        else {
+        if (typeof window.web3 !== 'undefined') {
+            return window.web3.currentProvider;
+        } else if (typeof window.ethereum !== 'undefined') {
+            return window.ethereum;
+        } else {
             throw new Error('Please install XDCPay!');
         }
-
-        return provider;
     }
 
     async init() {
@@ -110,70 +102,62 @@ class Web3Service {
             walletButton.textContent = 'Connecting...';
             walletButton.disabled = true;
 
-            // Request account access
-            const accounts = await provider.request({ 
-                method: 'eth_requestAccounts',
-                params: []
-            });
+            // Initialize Web3
+            this.web3 = new Web3(provider);
 
-            if (!accounts || accounts.length === 0) {
-                throw new Error('No accounts found');
+            // Request account access using enable()
+            try {
+                // Try modern method first
+                if (provider.enable) {
+                    await provider.enable();
+                } else {
+                    // Fallback for newer versions
+                    await this.web3.eth.requestAccounts();
+                }
+            } catch (error) {
+                throw new Error('Please allow access to your XDCPay wallet');
             }
 
-            this.web3 = new Web3(provider);
+            // Get accounts
+            const accounts = await this.web3.eth.getAccounts();
+            if (!accounts || accounts.length === 0) {
+                throw new Error('No accounts found. Please unlock your XDCPay wallet.');
+            }
+
             this.account = accounts[0];
             this.contract = new this.web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
 
-            // Check if we're on the right network (XDC Apothem Testnet)
-            const chainId = await this.web3.eth.getChainId();
-            if (chainId !== 51) { // XDC Apothem Testnet chainId
-                try {
-                    await provider.request({
-                        method: 'wallet_switchEthereumChain',
-                        params: [{ chainId: '0x33' }], // 51 in hex
-                    });
-                } catch (switchError) {
-                    // If the network doesn't exist, add it
-                    if (switchError.code === 4902) {
-                        await provider.request({
-                            method: 'wallet_addEthereumChain',
-                            params: [{
-                                chainId: '0x33',
-                                chainName: 'XDC Apothem Testnet',
-                                nativeCurrency: {
-                                    name: 'XDC',
-                                    symbol: 'XDC',
-                                    decimals: 18
-                                },
-                                rpcUrls: ['https://erpc.apothem.network'],
-                                blockExplorerUrls: ['https://explorer.apothem.network']
-                            }]
-                        });
-                    } else {
-                        throw switchError;
-                    }
-                }
+            // Check network
+            const networkId = await this.web3.eth.net.getId();
+            if (networkId !== 51) { // XDC Apothem Testnet
+                showToast('Please switch to XDC Apothem Testnet in XDCPay');
+                throw new Error('Please switch to XDC Apothem Testnet');
             }
 
-            // Setup event listeners
-            provider.on('accountsChanged', (accounts) => {
-                this.account = accounts[0];
-                this.updateUI();
-                window.location.reload();
-            });
+            // Setup event listeners for account changes
+            if (provider.on) {
+                provider.on('accountsChanged', (newAccounts) => {
+                    this.account = newAccounts[0];
+                    this.updateUI();
+                });
 
-            provider.on('chainChanged', () => {
-                window.location.reload();
-            });
+                provider.on('networkChanged', (networkId) => {
+                    if (networkId !== '51') {
+                        showToast('Please switch to XDC Apothem Testnet');
+                    }
+                    window.location.reload();
+                });
 
-            provider.on('disconnect', () => {
-                this.account = null;
-                this.updateUI();
-                window.location.reload();
-            });
+                provider.on('disconnect', () => {
+                    this.account = null;
+                    this.updateUI();
+                });
+            }
 
             this.updateUI();
+            showToast('Successfully connected to XDCPay!');
             return true;
+
         } catch (error) {
             console.error('Wallet connection error:', error);
             showToast(error.message || 'Failed to connect wallet');
@@ -192,13 +176,21 @@ class Web3Service {
             throw new Error('Please connect your wallet first');
         }
 
+        if (!this.web3) {
+            throw new Error('Web3 not initialized');
+        }
+
         try {
             const result = await this.contract.methods.registerContribution(taskId)
-                .send({ from: this.account });
+                .send({ 
+                    from: this.account,
+                    gasPrice: await this.web3.eth.getGasPrice(),
+                    gas: 200000 // Adjust gas limit as needed
+                });
             return result.transactionHash;
         } catch (error) {
             console.error('Error registering contribution:', error);
-            throw error;
+            throw new Error(error.message || 'Failed to register contribution');
         }
     }
 
@@ -207,13 +199,21 @@ class Web3Service {
             throw new Error('Please connect your wallet first');
         }
 
+        if (!this.web3) {
+            throw new Error('Web3 not initialized');
+        }
+
         try {
             const result = await this.contract.methods.claimReward()
-                .send({ from: this.account });
+                .send({ 
+                    from: this.account,
+                    gasPrice: await this.web3.eth.getGasPrice(),
+                    gas: 200000 // Adjust gas limit as needed
+                });
             return result.transactionHash;
         } catch (error) {
             console.error('Error claiming reward:', error);
-            throw error;
+            throw new Error(error.message || 'Failed to claim reward');
         }
     }
 
@@ -221,7 +221,8 @@ class Web3Service {
         const walletButton = document.getElementById('wallet-button');
         if (walletButton) {
             if (this.account) {
-                walletButton.textContent = `Connected: ${this.account.substring(0, 6)}...${this.account.substring(38)}`;
+                const displayAddress = `${this.account.substring(0, 6)}...${this.account.substring(38)}`;
+                walletButton.textContent = `Connected: ${displayAddress}`;
                 walletButton.classList.add('connected');
                 document.querySelectorAll('.btn-primary').forEach(btn => btn.disabled = false);
             } else {
