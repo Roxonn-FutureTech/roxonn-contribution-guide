@@ -175,10 +175,10 @@ class Web3Service {
             const modal = document.querySelector('.workflow-modal');
             const loadingStep = modal.querySelector('.loading-step');
             const allSteps = modal.querySelectorAll('.step');
-            const submitStep = modal.querySelector('.submit-step');
             
             allSteps.forEach(step => step.classList.remove('active'));
             loadingStep.classList.add('active');
+            loadingStep.querySelector('p').textContent = 'Please confirm the transaction in your wallet...';
 
             // Get task complexity from the UI
             const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
@@ -196,7 +196,8 @@ class Web3Service {
                 console.log('Task ID:', `GH-${taskId.replace('task-', '')}`);
                 console.log('Complexity:', complexity);
 
-                const contributionTx = await this.contract.methods.registerContribution(
+                // Send transaction
+                const tx = await this.contract.methods.registerContribution(
                     this.account,
                     `GH-${taskId.replace('task-', '')}`,
                     complexity
@@ -205,48 +206,80 @@ class Web3Service {
                     gas: 200000
                 });
 
-                console.log('Contribution registered:', contributionTx);
+                // Update loading message
+                loadingStep.querySelector('p').textContent = 'Transaction submitted, waiting for confirmation...';
 
-                // Show success message
-                const successStep = modal.querySelector('.success-step');
-                if (successStep) {
-                    allSteps.forEach(step => step.classList.remove('active'));
-                    successStep.classList.add('active');
-                    
-                    // Update transaction details
-                    successStep.querySelector('.transaction-hash').textContent = 
-                        `Transaction: ${contributionTx.transactionHash.substring(0, 10)}...`;
-                    
-                    const rewardAmount = complexity === 'hard' ? '300' : complexity === 'medium' ? '200' : '100';
-                    successStep.querySelector('.tokens-earned').textContent = 
-                        `+${rewardAmount} ROXN tokens will be sent to your wallet`;
+                // Wait for transaction receipt
+                console.log('Waiting for transaction receipt...');
+                const receipt = await this.web3.eth.getTransactionReceipt(tx.transactionHash);
+                
+                if (!receipt) {
+                    // Poll for receipt every 2 seconds
+                    const pollReceipt = async () => {
+                        const receipt = await this.web3.eth.getTransactionReceipt(tx.transactionHash);
+                        if (receipt) {
+                            console.log('Transaction confirmed:', receipt);
+                            handleSuccess(tx, complexity);
+                        } else {
+                            setTimeout(pollReceipt, 2000);
+                        }
+                    };
+                    setTimeout(pollReceipt, 2000);
+                } else {
+                    console.log('Transaction confirmed immediately:', receipt);
+                    handleSuccess(tx, complexity);
                 }
 
-                return contributionTx.transactionHash;
+                return tx.transactionHash;
             } catch (error) {
                 console.error('Transaction error:', error);
-                
-                // Show error in the modal
-                const errorStep = modal.querySelector('.error-step');
-                if (errorStep) {
-                    allSteps.forEach(step => step.classList.remove('active'));
-                    errorStep.classList.add('active');
-                    
-                    // Format the error message
-                    let errorMessage = error.message || 'Failed to register contribution';
-                    if (errorMessage.includes('onlyOwner')) {
-                        errorMessage = 'Only the contract owner can register contributions';
-                    } else if (errorMessage.includes('user rejected')) {
-                        errorMessage = 'Transaction was rejected. Please try again.';
-                    }
-                    errorStep.querySelector('.error-message').textContent = errorMessage;
-                }
-
+                handleError(error);
                 throw error;
             }
         } catch (error) {
             console.error('Error registering contribution:', error);
+            handleError(error);
             throw error;
+        }
+
+        function handleSuccess(tx, complexity) {
+            const successStep = modal.querySelector('.success-step');
+            if (successStep) {
+                allSteps.forEach(step => step.classList.remove('active'));
+                successStep.classList.add('active');
+                
+                // Update transaction details
+                successStep.querySelector('.transaction-hash').textContent = 
+                    `Transaction: ${tx.transactionHash.substring(0, 10)}...`;
+                
+                const rewardAmount = complexity === 'hard' ? '300' : complexity === 'medium' ? '200' : '100';
+                successStep.querySelector('.tokens-earned').textContent = 
+                    `+${rewardAmount} ROXN tokens will be sent to your wallet`;
+                
+                // Refresh the page after 5 seconds to show updated state
+                setTimeout(() => {
+                    window.location.reload();
+                }, 5000);
+            }
+        }
+
+        function handleError(error) {
+            const errorStep = modal.querySelector('.error-step');
+            if (errorStep) {
+                allSteps.forEach(step => step.classList.remove('active'));
+                errorStep.classList.add('active');
+                
+                // Format the error message
+                let errorMessage = error.message || 'Failed to register contribution';
+                if (errorMessage.includes('onlyOwner')) {
+                    errorMessage = 'Only the contract owner can register contributions';
+                } else if (errorMessage.includes('user rejected')) {
+                    errorMessage = 'Transaction was rejected. Please try again.';
+                } else if (errorMessage.includes('transaction not mined')) {
+                    errorMessage = 'Transaction is taking longer than expected. Please check the block explorer.';
+                }
+                errorStep.querySelector('.error-message').textContent = errorMessage;
+            }
         }
     }
 
