@@ -3,26 +3,69 @@ const CONTRACT_ABI = [
     {
         "inputs": [
             {
-                "name": "taskId",
-                "type": "uint256"
+                "internalType": "address",
+                "name": "contributor",
+                "type": "address"
+            },
+            {
+                "internalType": "string",
+                "name": "githubIssueId",
+                "type": "string"
+            },
+            {
+                "internalType": "string",
+                "name": "complexity",
+                "type": "string"
             }
         ],
         "name": "registerContribution",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "owner",
         "outputs": [
             {
-                "name": "success",
-                "type": "bool"
+                "internalType": "address",
+                "name": "",
+                "type": "address"
             }
         ],
+        "stateMutability": "view",
+        "type": "function"
+    }
+];
+
+const TOKEN_ABI = [
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "contributor",
+                "type": "address"
+            },
+            {
+                "internalType": "string",
+                "name": "complexity",
+                "type": "string"
+            }
+        ],
+        "name": "rewardContributor",
+        "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
     }
 ];
 
+const TOKEN_ADDRESS = '0x...'; // Replace with the actual token contract address
+
 class Web3Service {
     constructor() {
         this.web3 = null;
         this.contract = null;
+        this.tokenContract = null;
         this.account = null;
         this.isOwner = false;
     }
@@ -44,13 +87,10 @@ class Web3Service {
             try {
                 let accounts;
                 if (provider.request) {
-                    // Modern wallets (MetaMask, newer XDCPay)
                     accounts = await provider.request({ method: 'eth_requestAccounts' });
                 } else if (provider.enable) {
-                    // Legacy wallets (older XDCPay)
                     accounts = await provider.enable();
                 } else {
-                    // Fallback for very old wallets
                     accounts = await this.web3.eth.getAccounts();
                 }
                 
@@ -70,8 +110,9 @@ class Web3Service {
                 await this.switchToXDCTestnet();
             }
 
-            // Initialize contribution contract
+            // Initialize contracts
             this.contract = new this.web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+            this.tokenContract = new this.web3.eth.Contract(TOKEN_ABI, TOKEN_ADDRESS);
 
             // Check if user is contract owner
             try {
@@ -84,17 +125,19 @@ class Web3Service {
 
             // Update wallet button
             const walletBtn = document.getElementById('wallet-button');
-            walletBtn.textContent = this.account.substring(0, 6) + '...' + this.account.substring(38);
-            walletBtn.classList.add('connected');
+            if (walletBtn) {
+                walletBtn.textContent = this.account.substring(0, 6) + '...' + this.account.substring(38);
+                walletBtn.classList.add('connected');
+            }
 
             // Setup event listeners for both modern and legacy providers
             if (provider.on) {
                 provider.on('accountsChanged', (accounts) => {
                     this.account = accounts[0];
-                    if (this.account) {
+                    if (this.account && walletBtn) {
                         walletBtn.textContent = this.account.substring(0, 6) + '...' + this.account.substring(38);
                         walletBtn.classList.add('connected');
-                    } else {
+                    } else if (walletBtn) {
                         walletBtn.textContent = 'Connect XDCPay';
                         walletBtn.classList.remove('connected');
                     }
@@ -108,36 +151,7 @@ class Web3Service {
             return true;
         } catch (error) {
             console.error('Error initializing Web3:', error);
-            showToast(error.message || 'Failed to initialize Web3');
-            return false;
-        }
-    }
-
-    async switchToXDCTestnet() {
-        try {
-            await window.ethereum.request({
-                method: 'wallet_switchEthereumChain',
-                params: [{ chainId: '0x33' }] // Chain ID 51 in hex
-            });
-        } catch (error) {
-            if (error.code === 4902) {
-                await window.ethereum.request({
-                    method: 'wallet_addEthereumChain',
-                    params: [{
-                        chainId: '0x33',
-                        chainName: 'XDC Apothem Testnet',
-                        nativeCurrency: {
-                            name: 'XDC',
-                            symbol: 'XDC',
-                            decimals: 18
-                        },
-                        rpcUrls: ['https://rpc.apothem.network'],
-                        blockExplorerUrls: ['https://explorer.apothem.network']
-                    }]
-                });
-            } else {
-                throw error;
-            }
+            throw error;
         }
     }
 
@@ -161,31 +175,8 @@ class Web3Service {
             const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
             const complexity = taskElement.getAttribute('data-complexity') || 'easy';
 
-            // For demo purposes, we'll simulate the contribution registration
-            // since only the contract owner can register contributions
-            if (!this.isOwner) {
-                // Show a message explaining the demo mode
-                showToast('Demo Mode: Simulating contribution registration');
-                
-                // Wait for 2 seconds to simulate transaction
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                
-                // Show success message
-                const successStep = modal.querySelector('.success-step');
-                if (successStep) {
-                    allSteps.forEach(step => step.classList.remove('active'));
-                    successStep.classList.add('active');
-                    successStep.querySelector('p').textContent = 'Demo Mode: Your contribution would be registered here';
-                    
-                    // Keep success visible for 2 seconds
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                }
-
-                return '0x' + '0'.repeat(64); // Mock transaction hash
-            }
-
-            // If user is owner, proceed with actual contract interaction
-            const tx = await this.contract.methods.registerContribution(
+            // Register contribution
+            const contributionTx = await this.contract.methods.registerContribution(
                 this.account,
                 `GH-${taskId.replace('task-', '')}`,
                 complexity
@@ -194,20 +185,28 @@ class Web3Service {
                 gas: 200000
             });
 
+            console.log('Contribution registered:', contributionTx);
+
+            // Reward tokens
+            const rewardTx = await this.tokenContract.methods.rewardContributor(
+                this.account,
+                complexity
+            ).send({
+                from: this.account,
+                gas: 200000
+            });
+
+            console.log('Tokens rewarded:', rewardTx);
+
             // Show success message
-            showToast('Contribution registered successfully!');
-            
-            // Show success step
             const successStep = modal.querySelector('.success-step');
             if (successStep) {
                 allSteps.forEach(step => step.classList.remove('active'));
                 successStep.classList.add('active');
-                
-                // Keep modal open for 2 seconds to show success
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                successStep.querySelector('p').textContent = 'Contribution registered and tokens rewarded!';
             }
 
-            return tx.transactionHash;
+            return contributionTx.transactionHash;
         } catch (error) {
             console.error('Error registering contribution:', error);
             
@@ -223,16 +222,40 @@ class Web3Service {
                 // Format the error message
                 let errorMessage = error.message || 'Failed to register contribution';
                 if (errorMessage.includes('onlyOwner')) {
-                    errorMessage = 'Demo Mode: In production, only the contract owner can register contributions';
+                    errorMessage = 'Only the contract owner can register contributions';
                 }
                 errorStep.querySelector('.error-message').textContent = errorMessage;
-                
-                // Keep error visible for 2 seconds
-                await new Promise(resolve => setTimeout(resolve, 2000));
             }
 
-            showToast(error.message || 'Failed to register contribution');
             throw error;
+        }
+    }
+
+    async switchToXDCTestnet() {
+        try {
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: '0x33' }], // 51 in hex
+            });
+        } catch (error) {
+            if (error.code === 4902) {
+                await window.ethereum.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [{
+                        chainId: '0x33',
+                        chainName: 'XDC Testnet',
+                        nativeCurrency: {
+                            name: 'XDC',
+                            symbol: 'XDC',
+                            decimals: 18
+                        },
+                        rpcUrls: ['https://rpc.apothem.network'],
+                        blockExplorerUrls: ['https://explorer.apothem.network']
+                    }]
+                });
+            } else {
+                throw error;
+            }
         }
     }
 }

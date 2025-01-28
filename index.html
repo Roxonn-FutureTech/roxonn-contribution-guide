@@ -8,128 +8,63 @@
     <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
     <script src="js/web3.js" defer></script>
     <style>
+        /* Glass Card */
         .glass-card {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 0.5rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        .btn-primary {
-            background: linear-gradient(135deg, #00C2FF 0%, #0047FF 100%);
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
+        /* Task Card */
+        .task-card {
+            transition: transform 0.2s;
+        }
+
+        .task-card:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Contribute Button */
+        .contribute-btn {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
             font-weight: 500;
-            transition: all 0.3s ease;
+            transition: opacity 0.2s;
         }
 
-        .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 194, 255, 0.3);
+        .contribute-btn:hover {
+            opacity: 0.9;
         }
 
-        .btn-primary:disabled {
+        .contribute-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            transform: none;
         }
 
+        /* Task Reward */
         .task-reward {
-            background: linear-gradient(135deg, #00C2FF 0%, #0047FF 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: bold;
-            font-size: 1.25rem;
+            color: #3b82f6;
+            font-weight: 500;
         }
 
-        .loading-spinner {
-            width: 1rem;
-            height: 1rem;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            margin-right: 0.5rem;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        .token-animation {
-            position: fixed;
-            font-size: 1.5rem;
-            pointer-events: none;
-            animation: floatUp 2s ease-out forwards;
-        }
-
-        @keyframes floatUp {
-            0% {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            20% {
-                opacity: 1;
-            }
-            80% {
-                opacity: 1;
-            }
-            100% {
-                opacity: 0;
-                transform: translateY(-60px);
-            }
-        }
-
-        .workflow-step {
-            opacity: 0;
-            transform: translateX(20px);
-            transition: all 0.5s ease;
-            flex: 0 0 300px;
-            position: relative;
-        }
-
-        .workflow-step::after {
-            content: '→';
-            position: absolute;
-            right: -1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #00C2FF;
-            font-size: 1.5rem;
-        }
-
-        .workflow-step:last-child::after {
+        /* Modal */
+        .workflow-modal.hidden {
             display: none;
         }
 
-        .workflow-step.show {
-            opacity: 1;
-            transform: translateX(0);
+        .modal-content {
+            position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
-        .code-preview {
-            background: rgba(0,0,0,0.3);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            font-family: monospace;
-            color: #00ff00;
-        }
-
-        /* Modal Steps */
-        .steps-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 200px;
-        }
-
+        /* Steps */
         .step {
             display: none;
             text-align: center;
-            width: 100%;
         }
 
         .step.active {
@@ -138,13 +73,13 @@
 
         /* Loading Spinner */
         .loading-spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left: 4px solid #3b82f6;
             border-radius: 50%;
             width: 40px;
             height: 40px;
             animation: spin 1s linear infinite;
-            margin: 20px auto;
+            margin: 2rem auto;
         }
 
         @keyframes spin {
@@ -154,43 +89,15 @@
 
         /* Success and Error Icons */
         .success-icon {
-            color: #2ecc71;
+            color: #10b981;
             font-size: 48px;
-            margin: 20px 0;
+            margin: 2rem 0;
         }
 
         .error-icon {
-            color: #e74c3c;
+            color: #ef4444;
             font-size: 48px;
-            margin: 20px 0;
-        }
-
-        .error-message {
-            color: #e74c3c;
-            margin: 10px 0;
-        }
-
-        /* Difficulty Tags */
-        .difficulty {
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        .difficulty.easy {
-            background-color: rgba(72, 187, 120, 0.2);
-            color: #48bb78;
-        }
-
-        .difficulty.medium {
-            background-color: rgba(237, 137, 54, 0.2);
-            color: #ed8936;
-        }
-
-        .difficulty.hard {
-            background-color: rgba(245, 101, 101, 0.2);
-            color: #f56565;
+            margin: 2rem 0;
         }
     </style>
 </head>
@@ -224,38 +131,51 @@
 
         <section class="max-w-3xl mx-auto space-y-6" id="tasks-container">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+                <!-- Task 1 -->
                 <div class="task-card glass-card" data-task-id="task-1" data-complexity="easy">
                     <div class="p-6">
-                        <h3 class="text-xl font-bold mb-2">Add Dark Mode Support</h3>
-                        <p class="text-gray-300 mb-4">
-                            Implement dark mode support using CSS variables and a theme toggle button.
-                            The implementation should persist user's preference.
-                        </p>
-                        <div class="flex justify-between items-center">
-                            <span class="difficulty easy">Easy</span>
-                            <button 
-                                class="btn-primary" 
-                                onclick="handleContribution('task-1')"
-                                data-task-id="task-1">
+                        <h3 class="text-xl font-bold mb-2">Fix Navigation Menu</h3>
+                        <p class="text-gray-300 mb-4">Update the responsive navigation menu to work correctly on mobile devices.</p>
+                        <div class="flex flex-col gap-4">
+                            <div class="flex items-center justify-between">
+                                <span class="difficulty easy">Easy</span>
+                                <span class="task-reward">100 ROXN</span>
+                            </div>
+                            <button onclick="showWorkflow(this)" class="contribute-btn w-full">
                                 Start Contributing
                             </button>
                         </div>
                     </div>
                 </div>
 
+                <!-- Task 2 -->
                 <div class="task-card glass-card" data-task-id="task-2" data-complexity="medium">
                     <div class="p-6">
-                        <h3 class="text-xl font-bold mb-2">Implement Responsive Design</h3>
-                        <p class="text-gray-300 mb-4">
-                            Make the website fully responsive using Tailwind CSS breakpoints.
-                            Should work well on mobile, tablet, and desktop.
-                        </p>
-                        <div class="flex justify-between items-center">
-                            <span class="difficulty medium">Medium</span>
-                            <button 
-                                class="btn-primary"
-                                onclick="handleContribution('task-2')"
-                                data-task-id="task-2">
+                        <h3 class="text-xl font-bold mb-2">Implement Dark Mode</h3>
+                        <p class="text-gray-300 mb-4">Add dark mode support with a theme toggle switch in the header.</p>
+                        <div class="flex flex-col gap-4">
+                            <div class="flex items-center justify-between">
+                                <span class="difficulty medium">Medium</span>
+                                <span class="task-reward">200 ROXN</span>
+                            </div>
+                            <button onclick="showWorkflow(this)" class="contribute-btn w-full">
+                                Start Contributing
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Task 3 -->
+                <div class="task-card glass-card" data-task-id="task-3" data-complexity="hard">
+                    <div class="p-6">
+                        <h3 class="text-xl font-bold mb-2">Add Search Functionality</h3>
+                        <p class="text-gray-300 mb-4">Implement real-time search with filtering and sorting capabilities.</p>
+                        <div class="flex flex-col gap-4">
+                            <div class="flex items-center justify-between">
+                                <span class="difficulty hard">Hard</span>
+                                <span class="task-reward">300 ROXN</span>
+                            </div>
+                            <button onclick="showWorkflow(this)" class="contribute-btn w-full">
                                 Start Contributing
                             </button>
                         </div>
@@ -264,230 +184,111 @@
             </div>
         </section>
 
-        <!-- Contribution Modal -->
-        <div id="workflow-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50">
-            <div class="glass-card max-w-6xl w-full mx-4 p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold">Contributing to Task</h3>
-                    <button onclick="closeWorkflowModal()" class="text-gray-400 hover:text-white">×</button>
-                </div>
-                <div class="flex overflow-x-auto gap-4 pb-4" id="workflow-steps">
-                    <!-- Steps will be added dynamically -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Contribution Workflow Modal -->
-        <div class="workflow-modal">
-            <div class="modal-content">
+        <!-- Workflow Modal -->
+        <div class="workflow-modal hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="modal-content glass-card p-8 max-w-md w-full mx-4">
                 <div class="steps-container">
                     <!-- Initial Step -->
                     <div class="step initial-step active">
-                        <h3>Start Contributing</h3>
-                        <p>Ready to contribute to this task?</p>
-                        <button onclick="handleContribution()" class="start-btn">Start</button>
+                        <h3 class="text-2xl font-bold mb-4">Start Contributing</h3>
+                        <p class="text-gray-300 mb-6">Ready to contribute to this task?</p>
+                        <div class="flex flex-col gap-4">
+                            <div class="flex items-center justify-between text-gray-300">
+                                <span>Reward:</span>
+                                <span class="current-reward">100 ROXN</span>
+                            </div>
+                            <button onclick="handleContribution(this)" class="contribute-btn w-full">
+                                Confirm
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Loading Step -->
                     <div class="step loading-step">
-                        <h3>Processing</h3>
+                        <h3 class="text-2xl font-bold mb-4">Processing</h3>
                         <div class="loading-spinner"></div>
-                        <p>Please confirm the transaction in your wallet...</p>
+                        <p class="text-gray-300 mt-4">Please confirm the transaction in your wallet...</p>
                     </div>
 
                     <!-- Success Step -->
                     <div class="step success-step">
-                        <h3>Success!</h3>
+                        <h3 class="text-2xl font-bold mb-4">Success!</h3>
                         <div class="success-icon">✓</div>
-                        <p>Your contribution has been registered</p>
+                        <p class="text-gray-300">Your contribution has been registered</p>
+                        <button onclick="closeModal()" class="contribute-btn w-full mt-6">
+                            Close
+                        </button>
                     </div>
 
                     <!-- Error Step -->
                     <div class="step error-step">
-                        <h3>Error</h3>
+                        <h3 class="text-2xl font-bold mb-4">Error</h3>
                         <div class="error-icon">✗</div>
-                        <p class="error-message">Something went wrong</p>
+                        <p class="error-message text-red-500"></p>
+                        <button onclick="closeModal()" class="contribute-btn w-full mt-6">
+                            Close
+                        </button>
                     </div>
                 </div>
-                <button class="close-btn" onclick="closeModal()">×</button>
+                <button class="close-btn absolute top-4 right-4 text-gray-500 hover:text-white" onclick="closeModal()">×</button>
             </div>
         </div>
 
-        <!-- Toast Notification -->
-        <div id="toast" class="fixed bottom-4 right-4 hidden">
-            <div class="glass-card p-4 flex items-center gap-3">
-                <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                </svg>
-                <p id="toast-message" class="text-sm"></p>
-            </div>
-        </div>
-    </main>
-
-    <script>
-        const workflowSteps = [
-            {
-                title: 'Fork Repository',
-                description: 'Creating a copy of the repository in your account...',
-                icon: '🔄',
-                duration: 1500
-            },
-            {
-                title: 'Clone Repository',
-                description: 'Downloading the code to your local machine...',
-                icon: '⬇️',
-                duration: 2000,
-                code: 'git clone https://github.com/yourusername/repository.git'
-            },
-            {
-                title: 'Create Branch',
-                description: 'Creating a new branch for your changes...',
-                icon: '🌿',
-                duration: 1000,
-                code: 'git checkout -b feature/task-implementation'
-            },
-            {
-                title: 'Make Changes',
-                description: 'Implementing the required changes...',
-                icon: '✏️',
-                duration: 2500,
-                code: '// Adding new code\n...'
-            },
-            {
-                title: 'Commit Changes',
-                description: 'Saving your changes...',
-                icon: '💾',
-                duration: 1500,
-                code: 'git add .\ngit commit -m "Implement requested changes"'
-            },
-            {
-                title: 'Push Changes',
-                description: 'Uploading your changes to GitHub...',
-                icon: '⬆️',
-                duration: 2000,
-                code: 'git push origin feature/task-implementation'
-            },
-            {
-                title: 'Create Pull Request',
-                description: 'Submitting your changes for review...',
-                icon: '🔀',
-                duration: 2000
-            },
-            {
-                title: 'Changes Approved',
-                description: 'Your contribution has been accepted!',
-                icon: '✅',
-                duration: 1000
+        <script>
+            // Show workflow modal
+            function showWorkflow(button) {
+                const taskCard = button.closest('.task-card');
+                const complexity = taskCard.getAttribute('data-complexity');
+                const modal = document.querySelector('.workflow-modal');
+                
+                // Update reward amount based on complexity
+                const rewardAmount = complexity === 'hard' ? '300' : complexity === 'medium' ? '200' : '100';
+                modal.querySelector('.current-reward').textContent = `${rewardAmount} ROXN`;
+                
+                // Store task ID on the confirm button
+                const confirmButton = modal.querySelector('.initial-step button');
+                confirmButton.setAttribute('data-task-id', taskCard.getAttribute('data-task-id'));
+                
+                // Show modal
+                modal.classList.remove('hidden');
+                
+                // Reset to initial step
+                const steps = modal.querySelectorAll('.step');
+                steps.forEach(step => step.classList.remove('active'));
+                modal.querySelector('.initial-step').classList.add('active');
             }
-        ];
 
-        function showWorkflowModal(taskId) {
-            const modal = document.getElementById('workflow-modal');
-            const stepsContainer = document.getElementById('workflow-steps');
-            stepsContainer.innerHTML = '';
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            
-            let totalDelay = 0;
-            
-            workflowSteps.forEach((step, index) => {
-                const stepElement = document.createElement('div');
-                stepElement.className = 'workflow-step glass-card p-4';
-                stepElement.innerHTML = `
-                    <div class="flex flex-col gap-4">
-                        <div class="flex items-center gap-3">
-                            <div class="text-2xl">${step.icon}</div>
-                            <div>
-                                <h4 class="font-semibold">${step.title}</h4>
-                                <p class="text-gray-400 text-sm">${step.description}</p>
-                            </div>
-                        </div>
-                        ${step.code ? `
-                            <div class="code-preview text-sm mt-2">
-                                <code>${step.code}</code>
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
+            // Handle contribution
+            async function handleContribution(button) {
+                const taskId = button.getAttribute('data-task-id');
+                button.disabled = true;
                 
-                stepsContainer.appendChild(stepElement);
-                
-                setTimeout(() => {
-                    stepElement.classList.add('show');
-                    if (index === workflowSteps.length - 1) {
-                        setTimeout(() => {
-                            showTokenAnimation(taskId);
-                            setTimeout(closeWorkflowModal, 1500);
-                        }, 1000);
+                try {
+                    await web3Service.registerContribution(taskId);
+                } catch (error) {
+                    console.error(error);
+                } finally {
+                    button.disabled = false;
+                }
+            }
+
+            // Close modal
+            function closeModal() {
+                const modal = document.querySelector('.workflow-modal');
+                modal.classList.add('hidden');
+            }
+
+            // Initialize
+            document.addEventListener('DOMContentLoaded', () => {
+                // Close modal when clicking outside
+                const modal = document.querySelector('.workflow-modal');
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        closeModal();
                     }
-                }, totalDelay);
-                
-                totalDelay += step.duration;
+                });
             });
-        }
-
-        function closeWorkflowModal() {
-            const modal = document.getElementById('workflow-modal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }
-
-        function showToast(message, duration = 3000) {
-            const toast = document.getElementById('toast');
-            const messageEl = document.getElementById('toast-message');
-            messageEl.textContent = message;
-            toast.classList.remove('hidden');
-            setTimeout(() => toast.classList.add('hidden'), duration);
-        }
-
-        async function handleContribution(taskId) {
-            const button = document.querySelector(`[data-task-id="${taskId}"]`);
-            
-            try {
-                button.disabled = true;
-                button.innerHTML = '<div class="loading-spinner"></div> Processing...';
-                
-                // Show the workflow modal first
-                showWorkflowModal(taskId);
-                
-                // Continue with the web3 transaction after workflow animation
-                const tx = await web3Service.registerContribution(taskId);
-                
-                showToast('Contribution registered successfully! Transaction: ' + tx.substring(0, 10) + '...');
-                
-                button.textContent = 'Contributed';
-                button.disabled = true;
-                button.classList.add('opacity-50');
-            } catch (error) {
-                console.error('Error:', error);
-                showToast('Error: ' + (error.message || 'Failed to register contribution'));
-                button.disabled = false;
-                button.textContent = 'Start Contributing';
-            }
-        }
-
-        function showTokenAnimation(taskId) {
-            const button = document.querySelector(`[data-task-id="${taskId}"]`);
-            const rect = button.getBoundingClientRect();
-            const reward = taskId === 'task-1' ? '500' : '1000';
-            
-            const floatingText = document.createElement('div');
-            floatingText.className = 'token-animation';
-            floatingText.textContent = `+${reward} ROXN`;
-            floatingText.style.left = `${rect.left}px`;
-            floatingText.style.top = `${rect.top}px`;
-            
-            document.body.appendChild(floatingText);
-            
-            setTimeout(() => {
-                floatingText.remove();
-            }, 2000);
-        }
-
-        // Function to close modal
-        function closeModal() {
-            document.querySelector('.workflow-modal').style.display = 'none';
-        }
-    </script>
+        </script>
+    </main>
 </body>
 </html>
