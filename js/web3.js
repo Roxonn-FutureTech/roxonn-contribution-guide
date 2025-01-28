@@ -1,4 +1,4 @@
-const CONTRACT_ADDRESS = '0xf29193B652Ea2B4b63B7e31A1b4C5Db41cD9e747'; // ROXN token contract on XDC Testnet
+const CONTRACT_ADDRESS = 'xdc29193B652Ea2B4b63B7e31A1b4C5Db41cD9e747'; // ROXN token contract on XDC Testnet
 const CONTRACT_ABI = [
     {
         "constant": true,
@@ -65,8 +65,11 @@ class Web3Service {
                 await this.switchToXDCTestnet();
             }
 
-            // Initialize contract
-            this.contract = new this.web3.eth.Contract(this.contractABI, this.contractAddress);
+            // Convert contract address to checksum format
+            const checksumAddress = this.web3.utils.toChecksumAddress(this.contractAddress.replace('xdc', '0x'));
+
+            // Initialize contract with checksum address
+            this.contract = new this.web3.eth.Contract(this.contractABI, checksumAddress);
 
             // Update UI
             const walletBtn = document.getElementById('wallet-button');
