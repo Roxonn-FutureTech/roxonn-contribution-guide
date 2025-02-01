@@ -272,14 +272,28 @@ class Web3Service {
                 gasLimit = Math.floor(gasLimit * 1.2); // Add 20% buffer
             } catch (gasError) {
                 console.warn('Gas estimation failed:', gasError);
-                if (gasError.message.includes('execution reverted')) {
-                    const revertMsg = gasError.message.match(/execution reverted: (.*?)(?:"|\}|$)/)?.[1];
+                
+                // Check for specific error messages
+                const errorMessage = gasError?.message || '';
+                
+                if (errorMessage.includes('execution reverted')) {
+                    const revertMsg = errorMessage.match(/execution reverted: (.*?)(?:"|\}|$)/)?.[1];
                     if (revertMsg) {
                         throw new Error(revertMsg);
                     }
                 }
-                // Use default gas limit if estimation fails
-                gasLimit = 500000;
+                
+                if (errorMessage.includes('insufficient funds')) {
+                    throw new Error('Insufficient XDC balance for gas fees');
+                }
+
+                if (errorMessage.includes('-32603')) {
+                    console.log('Internal RPC error, using default gas limit');
+                    gasLimit = 500000;
+                } else {
+                    // For any other error, use default gas limit
+                    gasLimit = 500000;
+                }
             }
 
             // Send transaction
@@ -294,12 +308,14 @@ class Web3Service {
             const transactionHash = await new Promise((resolve, reject) => {
                 promiEvent.once('transactionHash', (hash) => resolve(hash));
                 promiEvent.once('error', (error) => {
-                    if (error.message.includes('User denied')) {
+                    const errorMessage = error?.message || 'Transaction failed';
+                    
+                    if (errorMessage.includes('User denied')) {
                         reject(new Error('Transaction was rejected in your wallet'));
-                    } else if (error.message.includes('insufficient funds')) {
+                    } else if (errorMessage.includes('insufficient funds')) {
                         reject(new Error('Insufficient XDC balance for gas fees'));
                     } else {
-                        reject(error);
+                        reject(new Error(errorMessage));
                     }
                 });
             });
@@ -308,7 +324,7 @@ class Web3Service {
             return {
                 transactionHash,
                 confirmation: promiEvent.then((receipt) => {
-                    if (!receipt.status) {
+                    if (!receipt?.status) {
                         throw new Error('Transaction failed');
                     }
                     return receipt;
