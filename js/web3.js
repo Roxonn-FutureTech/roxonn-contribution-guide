@@ -282,10 +282,33 @@ class Web3Service {
         }
     }
 
+    async isContractOwner() {
+        try {
+            if (!this.contract || !this.account) {
+                return false;
+            }
+
+            const owner = await this.contract.methods.owner().call();
+            console.log('Contract owner:', owner);
+            console.log('Current account:', this.account);
+            
+            return owner.toLowerCase() === this.account.toLowerCase();
+        } catch (error) {
+            console.error('Owner check failed:', error);
+            return false;
+        }
+    }
+
     async setTaskReward(taskId, reward) {
         try {
             if (!this.web3 || !this.contract || !this.account) {
                 throw new Error('Web3 not initialized. Please connect your wallet first.');
+            }
+
+            // Check if caller is owner
+            const isOwner = await this.isContractOwner();
+            if (!isOwner) {
+                throw new Error('Only the contract owner can set task rewards');
             }
 
             const checksummedAccount = this.web3.utils.toChecksumAddress(this.account);
@@ -302,10 +325,13 @@ class Web3Service {
                 githubIssueId,
                 this.web3.utils.toWei(reward.toString(), 'ether')
             );
+            console.log('Method data:', method.encodeABI());
 
             // Get nonce and gas price
             const nonce = await this.web3.eth.getTransactionCount(this.account);
             const gasPrice = await this.web3.eth.getGasPrice();
+            console.log('Nonce:', nonce);
+            console.log('Gas Price:', gasPrice);
 
             // Try to estimate gas
             let gasLimit = await method.estimateGas({ 
@@ -313,14 +339,43 @@ class Web3Service {
             }).catch(() => 500000); // Default gas limit if estimation fails
 
             // Send transaction
-            const receipt = await method.send({ 
+            const txParams = {
                 from: checksummedAccount,
+                to: checksummedContract,
                 gas: gasLimit,
                 gasPrice: gasPrice,
-                nonce: nonce
+                nonce: nonce,
+                data: method.encodeABI()
+            };
+            console.log('Transaction parameters:', txParams);
+
+            // Get transaction hash immediately
+            const transactionHash = await new Promise((resolve, reject) => {
+                const promiEvent = method.send(txParams);
+
+                promiEvent.once('transactionHash', (hash) => {
+                    console.log('Transaction hash:', hash);
+                    resolve(hash);
+                });
+
+                promiEvent.once('error', (error) => {
+                    const errorMessage = error?.message || 'Transaction failed';
+                    console.error('Transaction error:', error);
+                    console.error('Error message:', errorMessage);
+                    reject(new Error(errorMessage));
+                });
+
+                // Also listen for receipt in case of quick confirmation
+                promiEvent.once('receipt', (receipt) => {
+                    console.log('Transaction receipt:', receipt);
+                    if (!receipt?.status) {
+                        reject(new Error('Transaction failed'));
+                    }
+                });
             });
 
-            return receipt;
+            console.log('Transaction submitted:', transactionHash);
+            return { transactionHash };
         } catch (error) {
             console.error('Set task reward error:', error);
             throw error;
