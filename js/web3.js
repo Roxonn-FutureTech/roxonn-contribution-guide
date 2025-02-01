@@ -284,17 +284,19 @@ class Web3Service {
 
     async isContractOwner() {
         try {
-            if (!this.contract || !this.account) {
-                return false;
-            }
-
-            const owner = await this.contract.methods.owner().call();
-            console.log('Contract owner:', owner);
-            console.log('Current account:', this.account);
+            if (!this.contract || !this.account) return false;
             
-            return owner.toLowerCase() === this.account.toLowerCase();
+            // Get owner with proper address format
+            const owner = await this.contract.methods.owner().call();
+            const currentAccount = this._convertXdcToEth(this.account);
+            
+            console.log('Contract owner check:');
+            console.log('Owner:', owner);
+            console.log('Current account:', currentAccount);
+            
+            return owner.toLowerCase() === currentAccount.toLowerCase();
         } catch (error) {
-            console.error('Owner check failed:', error);
+            console.error('Error checking owner:', error);
             return false;
         }
     }
@@ -346,35 +348,13 @@ class Web3Service {
             const method = this.contract.methods.taskRewards(githubIssueId);
             console.log('Method data:', method.encodeABI());
 
-            // Call the method with retries
-            let retries = 3;
-            let reward = '0';
+            // Call with explicit parameters
+            const result = await method.call({
+                from: fromAddress
+            });
             
-            while (retries > 0) {
-                try {
-                    // Create a raw call
-                    const data = method.encodeABI();
-                    const result = await this.web3.eth.call({
-                        to: contractAddress,
-                        data: data
-                    });
-                    
-                    // Parse the result
-                    if (result && result !== '0x') {
-                        reward = result;
-                        break;
-                    }
-                } catch (error) {
-                    console.error(`Task reward call failed (${retries} retries left):`, error);
-                    retries--;
-                    if (retries > 0) {
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-                    }
-                }
-            }
-
-            console.log('Raw reward value:', reward);
-            const rewardInEther = this.web3.utils.fromWei(reward, 'ether');
+            console.log('Raw reward value:', result);
+            const rewardInEther = this.web3.utils.fromWei(result, 'ether');
             console.log('Reward in ether:', rewardInEther);
             return rewardInEther;
         } catch (error) {
@@ -391,6 +371,7 @@ class Web3Service {
 
             // Check if caller is owner
             const isOwner = await this.isContractOwner();
+            console.log('Is contract owner:', isOwner);
             if (!isOwner) {
                 throw new Error('Only the contract owner can set task rewards');
             }
@@ -399,18 +380,17 @@ class Web3Service {
             const fromAddress = this._convertXdcToEth(this.account);
             const contractAddress = this._convertXdcToEth(this.contractAddress);
             const githubIssueId = `GH-${taskId}`;
+            const rewardInWei = this.web3.utils.toWei(reward.toString(), 'ether');
             
             console.log('Setting task reward...');
             console.log('From address:', fromAddress);
             console.log('Contract address:', contractAddress);
             console.log('GitHub Issue ID:', githubIssueId);
             console.log('Reward:', reward);
+            console.log('Reward in Wei:', rewardInWei);
 
             // Create contract method
-            const method = this.contract.methods.setTaskReward(
-                githubIssueId,
-                this.web3.utils.toWei(reward.toString(), 'ether')
-            );
+            const method = this.contract.methods.setTaskReward(githubIssueId, rewardInWei);
             console.log('Method data:', method.encodeABI());
 
             // Get nonce and gas price
@@ -436,53 +416,22 @@ class Web3Service {
             };
             console.log('Transaction parameters:', txParams);
 
-            // Get transaction hash immediately
-            const transactionHash = await new Promise((resolve, reject) => {
-                const promiEvent = method.send(txParams);
+            // Send and wait for confirmation
+            const receipt = await method.send(txParams);
+            console.log('Transaction receipt:', receipt);
 
-                promiEvent.once('transactionHash', (hash) => {
-                    console.log('Transaction hash:', hash);
-                    resolve(hash);
-                });
-
-                promiEvent.once('error', (error) => {
-                    const errorMessage = error?.message || 'Transaction failed';
-                    console.error('Transaction error:', error);
-                    console.error('Error message:', errorMessage);
-                    reject(new Error(errorMessage));
-                });
-
-                // Also listen for receipt in case of quick confirmation
-                promiEvent.once('receipt', (receipt) => {
-                    console.log('Transaction receipt:', receipt);
-                    if (!receipt?.status) {
-                        reject(new Error('Transaction failed'));
-                    }
-                });
-            });
-
-            console.log('Transaction submitted:', transactionHash);
-
-            // Wait for transaction confirmation and verify reward
-            console.log('Waiting for transaction confirmation...');
-            await new Promise(resolve => setTimeout(resolve, 5000));
-
-            // Verify reward was set
-            let verifyRetries = 3;
-            while (verifyRetries > 0) {
-                const reward = await this.getTaskReward(taskId);
-                if (reward !== '0') {
-                    console.log('Task reward verified:', reward);
-                    break;
-                }
-                verifyRetries--;
-                if (verifyRetries > 0) {
-                    console.log(`Retrying verification in 2s... (${verifyRetries} retries left)`);
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                }
+            if (!receipt?.status) {
+                throw new Error('Transaction failed');
             }
 
-            return { transactionHash };
+            // Verify reward was set
+            const verifiedReward = await this.getTaskReward(taskId);
+            if (verifiedReward === '0') {
+                throw new Error('Failed to set task reward');
+            }
+
+            console.log('Task reward set successfully:', verifiedReward);
+            return { transactionHash: receipt.transactionHash };
         } catch (error) {
             console.error('Set task reward error:', error);
             throw error;
