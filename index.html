@@ -6,6 +6,7 @@
     <title>Roxonn Contribution Guide</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <script src="js/web3.js"></script>
     <style>
         /* Glass Card */
@@ -215,65 +216,77 @@
             </p>
         </section>
 
-        <section class="max-w-3xl mx-auto space-y-6" id="tasks-container">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-                <!-- Task 1 -->
-                <div class="task-card glass-card p-6 mb-6" data-task-id="task-1" data-complexity="medium">
-                    <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <h3 class="text-xl font-bold mb-2">Fix Navigation Menu</h3>
-                            <p class="text-gray-300">Update the navigation menu to be responsive and fix mobile view issues.</p>
-                        </div>
-                        <div class="task-complexity px-3 py-1 rounded text-sm" data-complexity="medium">
-                            Medium
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            <!-- Task 1: Documentation -->
+            <div class="task-card glass-card p-6" data-task-id="1" data-complexity="easy">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-xl font-bold mb-2">Documentation Improvement</h3>
+                        <p class="text-gray-400 text-sm mb-4">Update README with setup instructions and contribution guidelines</p>
+                        <div class="flex items-center text-sm text-gray-400 mb-4">
+                            <span class="mr-4">
+                                <i class="fas fa-tag"></i>
+                                Easy
+                            </span>
+                            <span>
+                                <i class="fas fa-coins"></i>
+                                100 ROXN
+                            </span>
                         </div>
                     </div>
-                    <div class="flex justify-between items-center">
-                        <div class="flex items-center space-x-4">
-                            <div class="reward-info">
-                                <span class="text-sm text-gray-400">Reward:</span>
-                                <span class="text-white font-bold">200 ROXN</span>
-                            </div>
-                        </div>
-                        <button onclick="App.showWorkflow(this)" class="contribute-btn">
-                            Start Contributing
-                        </button>
-                    </div>
+                    <a href="https://github.com/Roxonn-FutureTech/roxonn-contribution-guide/issues/1" target="_blank" class="text-blue-400 hover:text-blue-300">
+                        #1
+                    </a>
                 </div>
+                <button onclick="App.handleContribution(this)" class="contribute-btn w-full">Start Contributing</button>
+            </div>
 
-                <!-- Task 2 -->
-                <div class="task-card glass-card" data-task-id="task-2" data-complexity="medium">
-                    <div class="p-6">
-                        <h3 class="text-xl font-bold mb-2">Implement Dark Mode</h3>
-                        <p class="text-gray-300 mb-4">Add dark mode support with a theme toggle switch in the header.</p>
-                        <div class="flex flex-col gap-4">
-                            <div class="flex items-center justify-between">
-                                <span class="difficulty medium">Medium</span>
-                                <span class="task-reward">200 ROXN</span>
-                            </div>
-                            <button onclick="App.showWorkflow(this)" class="contribute-btn w-full">
-                                Start Contributing
-                            </button>
+            <!-- Task 2: Smart Contract Testing -->
+            <div class="task-card glass-card p-6" data-task-id="2" data-complexity="medium">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-xl font-bold mb-2">Add Smart Contract Tests</h3>
+                        <p class="text-gray-400 text-sm mb-4">Implement comprehensive test suite for RoxonnContribution contract</p>
+                        <div class="flex items-center text-sm text-gray-400 mb-4">
+                            <span class="mr-4">
+                                <i class="fas fa-tag"></i>
+                                Medium
+                            </span>
+                            <span>
+                                <i class="fas fa-coins"></i>
+                                200 ROXN
+                            </span>
                         </div>
                     </div>
+                    <a href="https://github.com/Roxonn-FutureTech/roxonn-contribution-guide/issues/2" target="_blank" class="text-blue-400 hover:text-blue-300">
+                        #2
+                    </a>
                 </div>
+                <button onclick="App.handleContribution(this)" class="contribute-btn w-full">Start Contributing</button>
+            </div>
 
-                <!-- Task 3 -->
-                <div class="task-card glass-card" data-task-id="task-3" data-complexity="hard">
-                    <div class="p-6">
-                        <h3 class="text-xl font-bold mb-2">Add Search Functionality</h3>
-                        <p class="text-gray-300 mb-4">Implement real-time search with filtering and sorting capabilities.</p>
-                        <div class="flex flex-col gap-4">
-                            <div class="flex items-center justify-between">
-                                <span class="difficulty hard">Hard</span>
-                                <span class="task-reward">300 ROXN</span>
-                            </div>
-                            <button onclick="App.showWorkflow(this)" class="contribute-btn w-full">
-                                Start Contributing
-                            </button>
+            <!-- Task 3: Frontend Enhancement -->
+            <div class="task-card glass-card p-6" data-task-id="3" data-complexity="hard">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-xl font-bold mb-2">Enhance UI/UX</h3>
+                        <p class="text-gray-400 text-sm mb-4">Add transaction history and reward tracking dashboard</p>
+                        <div class="flex items-center text-sm text-gray-400 mb-4">
+                            <span class="mr-4">
+                                <i class="fas fa-tag"></i>
+                                Hard
+                            </span>
+                            <span>
+                                <i class="fas fa-coins"></i>
+                                300 ROXN
+                            </span>
                         </div>
                     </div>
+                    <a href="https://github.com/Roxonn-FutureTech/roxonn-contribution-guide/issues/3" target="_blank" class="text-blue-400 hover:text-blue-300">
+                        #3
+                    </a>
                 </div>
+                <button onclick="App.handleContribution(this)" class="contribute-btn w-full">Start Contributing</button>
             </div>
         </section>
 

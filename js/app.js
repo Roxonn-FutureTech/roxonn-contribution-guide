@@ -192,16 +192,17 @@ const App = (function() {
                 throw new Error('Task card not found');
             }
 
-            const taskId = taskCard.dataset.taskId;
+            const taskId = taskCard.getAttribute('data-task-id');
             if (!taskId) {
                 throw new Error('Task ID not found');
             }
 
-            const complexity = taskCard.dataset.complexity || 'easy';
+            const complexity = taskCard.getAttribute('data-complexity') || 'easy';
             const steps = modal.querySelectorAll('.step');
             const loadingStep = modal.querySelector('.loading-step');
             
             // Show loading state
+            modal.classList.remove('hidden');
             steps.forEach(step => step.classList.remove('active'));
             loadingStep.classList.add('active');
             loadingStep.querySelector('p').textContent = 'Please confirm the transaction in your wallet...';
@@ -239,6 +240,7 @@ const App = (function() {
                 return;
             }
 
+            modal.classList.remove('hidden');
             const steps = modal.querySelectorAll('.step');
             const errorStep = modal.querySelector('.error-step');
             
@@ -251,8 +253,6 @@ const App = (function() {
                     errorMessage = 'Transaction was rejected in your wallet';
                 } else if (errorMessage.includes('insufficient funds')) {
                     errorMessage = 'Insufficient XDC balance for gas fees';
-                } else if (errorMessage.includes('Task card not found')) {
-                    errorMessage = 'Could not find the task information. Please try again.';
                 }
                 
                 errorStep.querySelector('.error-message').textContent = errorMessage;
