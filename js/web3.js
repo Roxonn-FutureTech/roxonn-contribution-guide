@@ -352,11 +352,18 @@ class Web3Service {
             
             while (retries > 0) {
                 try {
-                    reward = await method.call({
-                        from: fromAddress,
-                        to: contractAddress
+                    // Create a raw call
+                    const data = method.encodeABI();
+                    const result = await this.web3.eth.call({
+                        to: contractAddress,
+                        data: data
                     });
-                    break;
+                    
+                    // Parse the result
+                    if (result && result !== '0x') {
+                        reward = result;
+                        break;
+                    }
                 } catch (error) {
                     console.error(`Task reward call failed (${retries} retries left):`, error);
                     retries--;
@@ -455,6 +462,26 @@ class Web3Service {
             });
 
             console.log('Transaction submitted:', transactionHash);
+
+            // Wait for transaction confirmation and verify reward
+            console.log('Waiting for transaction confirmation...');
+            await new Promise(resolve => setTimeout(resolve, 5000));
+
+            // Verify reward was set
+            let verifyRetries = 3;
+            while (verifyRetries > 0) {
+                const reward = await this.getTaskReward(taskId);
+                if (reward !== '0') {
+                    console.log('Task reward verified:', reward);
+                    break;
+                }
+                verifyRetries--;
+                if (verifyRetries > 0) {
+                    console.log(`Retrying verification in 2s... (${verifyRetries} retries left)`);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            }
+
             return { transactionHash };
         } catch (error) {
             console.error('Set task reward error:', error);
