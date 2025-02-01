@@ -396,12 +396,21 @@ class Web3Service {
             const method = this.contract.methods.taskRewards(githubIssueId);
             console.log('Method data:', method.encodeABI());
 
-            // Call the method
-            const reward = await method.call().catch(error => {
-                console.error('Task reward call failed:', error);
-                // Return 0 if call fails
-                return '0';
-            });
+            // Call the method with retries
+            let retries = 3;
+            let reward = '0';
+            while (retries > 0) {
+                try {
+                    reward = await method.call();
+                    break;
+                } catch (error) {
+                    console.error(`Task reward call failed (${retries} retries left):`, error);
+                    retries--;
+                    if (retries > 0) {
+                        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2s between retries
+                    }
+                }
+            }
 
             console.log('Raw reward value:', reward);
             const rewardInEther = this.web3.utils.fromWei(reward, 'ether');
@@ -409,7 +418,6 @@ class Web3Service {
             return rewardInEther;
         } catch (error) {
             console.error('Get task reward error:', error);
-            // Return 0 for any errors
             return '0';
         }
     }
@@ -454,8 +462,18 @@ class Web3Service {
             console.log('Contract instance:', this.contract);
             console.log('Contract methods:', Object.keys(this.contract.methods));
             
-            // Check if task exists and is not completed
-            const reward = await this.getTaskReward(taskId);
+            // Check if task exists and is not completed with retries
+            let retries = 3;
+            let reward = '0';
+            while (retries > 0) {
+                reward = await this.getTaskReward(taskId);
+                if (reward !== '0') break;
+                retries--;
+                if (retries > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            }
+
             console.log('Task reward:', reward);
             if (reward === '0') {
                 throw new Error('Task reward not set. Please contact the repository owner.');

@@ -286,13 +286,18 @@ const App = (function() {
         try {
             const taskId = document.getElementById('taskId').value;
             if (!taskId) {
-                throw new Error('Please enter a task ID');
+                showMessage('Please enter a task ID', 'error');
+                return;
             }
 
             const isOwner = await web3Service.isContractOwner();
             if (!isOwner) {
-                throw new Error('Only the contract owner can set task rewards');
+                showMessage('Only the contract owner can set task rewards', 'error');
+                return;
             }
+
+            // Show pending message
+            showMessage('Setting task reward...', 'info');
 
             // Set a default reward of 10 XDC
             const result = await web3Service.setTaskReward(taskId, '10');
@@ -300,10 +305,38 @@ const App = (function() {
 
             // Show success message
             showMessage('Task reward set successfully! You can now register contributions.', 'success');
+
+            // Wait for 2 blocks for the state to update
+            await new Promise(resolve => setTimeout(resolve, 5000));
+
+            // Verify the reward was set
+            const reward = await web3Service.getTaskReward(taskId);
+            if (reward === '0') {
+                showMessage('Task reward verification failed. Please try again.', 'error');
+            } else {
+                showMessage(`Task reward verified: ${reward} XDC`, 'success');
+            }
         } catch (error) {
             console.error('Set reward error:', error);
             showMessage(error.message, 'error');
         }
+    }
+
+    // Show message function
+    function showMessage(message, type = 'info') {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `fixed bottom-4 right-4 p-4 rounded-lg shadow-lg ${
+            type === 'error' ? 'bg-red-600' : 
+            type === 'success' ? 'bg-green-600' : 
+            'bg-blue-600'
+        } text-white`;
+        messageDiv.textContent = message;
+        document.body.appendChild(messageDiv);
+        
+        // Remove after 5 seconds
+        setTimeout(() => {
+            messageDiv.remove();
+        }, 5000);
     }
 
     // Public API
