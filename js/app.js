@@ -180,20 +180,34 @@ const App = (function() {
 
     // Handle contribution registration
     async function handleContribution(button) {
-        const modal = document.querySelector('.workflow-modal');
-        const steps = modal.querySelectorAll('.step');
-        const loadingStep = modal.querySelector('.loading-step');
-        const taskCard = button.closest('.task-card');
-        const taskId = taskCard.dataset.taskId;
-        
         try {
+            const modal = document.querySelector('.workflow-modal');
+            if (!modal) {
+                throw new Error('Modal not found');
+            }
+
+            // Find the task card that contains this button
+            const taskCard = button.closest('.task-card');
+            if (!taskCard) {
+                throw new Error('Task card not found');
+            }
+
+            const taskId = taskCard.dataset.taskId;
+            if (!taskId) {
+                throw new Error('Task ID not found');
+            }
+
+            const complexity = taskCard.dataset.complexity || 'easy';
+            const steps = modal.querySelectorAll('.step');
+            const loadingStep = modal.querySelector('.loading-step');
+            
             // Show loading state
             steps.forEach(step => step.classList.remove('active'));
             loadingStep.classList.add('active');
             loadingStep.querySelector('p').textContent = 'Please confirm the transaction in your wallet...';
 
             // Register contribution
-            const receipt = await web3Service.registerContribution(`GH-${taskId.replace('task-', '')}`);
+            const receipt = await web3Service.registerContribution(taskId, complexity);
             
             if (receipt && receipt.status) {
                 // Show success state
@@ -202,7 +216,6 @@ const App = (function() {
                 successStep.classList.add('active');
                 
                 // Update success message
-                const complexity = taskCard.dataset.complexity || 'easy';
                 const rewardAmount = getRewardAmount(complexity);
                 const xdcHash = receipt.transactionHash.replace('0x', 'xdc');
                 const explorerLink = `https://explorer.apothem.network/tx/${xdcHash}`;
@@ -220,18 +233,30 @@ const App = (function() {
             console.error('Contribution error:', error);
             
             // Show error state
-            const errorStep = modal.querySelector('.error-step');
-            steps.forEach(step => step.classList.remove('active'));
-            errorStep.classList.add('active');
-            
-            let errorMessage = error.message || 'Transaction failed';
-            if (errorMessage.includes('User denied')) {
-                errorMessage = 'Transaction was rejected in your wallet';
-            } else if (errorMessage.includes('insufficient funds')) {
-                errorMessage = 'Insufficient XDC balance for gas fees';
+            const modal = document.querySelector('.workflow-modal');
+            if (!modal) {
+                console.error('Modal not found for error display');
+                return;
             }
+
+            const steps = modal.querySelectorAll('.step');
+            const errorStep = modal.querySelector('.error-step');
             
-            errorStep.querySelector('.error-message').textContent = errorMessage;
+            if (errorStep) {
+                steps.forEach(step => step.classList.remove('active'));
+                errorStep.classList.add('active');
+                
+                let errorMessage = error.message || 'Transaction failed';
+                if (errorMessage.includes('User denied')) {
+                    errorMessage = 'Transaction was rejected in your wallet';
+                } else if (errorMessage.includes('insufficient funds')) {
+                    errorMessage = 'Insufficient XDC balance for gas fees';
+                } else if (errorMessage.includes('Task card not found')) {
+                    errorMessage = 'Could not find the task information. Please try again.';
+                }
+                
+                errorStep.querySelector('.error-message').textContent = errorMessage;
+            }
         }
     }
 

@@ -236,7 +236,7 @@ class Web3Service {
         }
     }
 
-    async registerContribution(taskId) {
+    async registerContribution(taskId, complexity = 'easy') {
         try {
             if (!this.contract) {
                 throw new Error('Contract not initialized');
@@ -259,48 +259,44 @@ class Web3Service {
 
             // Use checksummed addresses for contract interaction
             const checksummedAccount = this.web3.utils.toChecksumAddress(this.account);
+            const githubIssueId = `GH-${taskId.replace('task-', '')}`;
             
             console.log('Registering contribution...');
             console.log('Account:', checksummedAccount);
-            console.log('Task ID:', taskId);
+            console.log('GitHub Issue ID:', githubIssueId);
+            console.log('Complexity:', complexity);
             console.log('Contract Address:', this.contractAddress);
 
-            // Get nonce
+            // Get nonce and gas price
             const nonce = await this.web3.eth.getTransactionCount(this.account);
-            console.log('Nonce:', nonce);
-
-            // Get gas price
             const gasPrice = await this.web3.eth.getGasPrice();
+            console.log('Nonce:', nonce);
             console.log('Gas Price:', gasPrice);
 
-            // Estimate gas
+            // Estimate gas for the new contract method
             const gasEstimate = await this.contract.methods.registerContribution(
                 checksummedAccount,
-                taskId,
-                'easy'
+                githubIssueId,
+                complexity
             ).estimateGas({ 
                 from: checksummedAccount 
             });
             console.log('Gas Estimate:', gasEstimate);
 
-            // Prepare transaction
-            const txParams = {
+            // Send transaction with the new parameters
+            const receipt = await this.contract.methods.registerContribution(
+                checksummedAccount,
+                githubIssueId,
+                complexity
+            ).send({ 
                 from: checksummedAccount,
                 gas: Math.floor(gasEstimate * 1.2), // Add 20% buffer
                 gasPrice: gasPrice,
                 nonce: nonce
-            };
-
-            // Send transaction
-            const receipt = await this.contract.methods.registerContribution(
-                checksummedAccount,
-                taskId,
-                'easy'
-            ).send(txParams);
+            });
 
             console.log('Transaction successful:', receipt);
             return receipt;
-
         } catch (error) {
             console.error('Transaction error:', error);
             throw error;
