@@ -284,7 +284,7 @@ class Web3Service {
             console.log('Gas Estimate:', gasEstimate);
 
             // Send transaction with the new parameters
-            const receipt = await this.contract.methods.registerContribution(
+            const promiEvent = this.contract.methods.registerContribution(
                 checksummedAccount,
                 githubIssueId,
                 complexity
@@ -295,8 +295,23 @@ class Web3Service {
                 nonce: nonce
             });
 
-            console.log('Transaction successful:', receipt);
-            return receipt;
+            // Return both the transaction hash and the confirmation promise
+            return {
+                transactionHash: await new Promise((resolve) => {
+                    promiEvent.once('transactionHash', resolve);
+                }),
+                confirmation: new Promise((resolve, reject) => {
+                    promiEvent
+                        .once('confirmation', (confirmationNumber, receipt) => {
+                            console.log('Transaction confirmed:', receipt);
+                            resolve(receipt);
+                        })
+                        .once('error', (error) => {
+                            console.error('Transaction error:', error);
+                            reject(error);
+                        });
+                })
+            };
         } catch (error) {
             console.error('Transaction error:', error);
             throw error;

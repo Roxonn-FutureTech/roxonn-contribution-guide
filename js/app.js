@@ -208,7 +208,13 @@ const App = (function() {
             loadingStep.querySelector('p').textContent = 'Please confirm the transaction in your wallet...';
 
             // Register contribution
-            const receipt = await web3Service.registerContribution(taskId, complexity);
+            const { transactionHash, confirmation } = await web3Service.registerContribution(taskId, complexity);
+            
+            // Update UI to show transaction is pending
+            loadingStep.querySelector('p').textContent = 'Transaction submitted, waiting for confirmation...';
+            
+            // Wait for confirmation
+            const receipt = await confirmation;
             
             if (receipt && receipt.status) {
                 // Show success state
@@ -227,6 +233,11 @@ const App = (function() {
                     </a>`;
                 successStep.querySelector('.tokens-earned').textContent = 
                     `You earned ${rewardAmount} ROXN!`;
+
+                // Disable the contribute button
+                button.disabled = true;
+                button.textContent = 'Completed';
+                button.classList.add('opacity-50', 'cursor-not-allowed');
             } else {
                 throw new Error('Transaction failed');
             }
