@@ -300,11 +300,15 @@ class Web3Service {
     }
 
     _convertXdcToEth(address) {
-        return '0x' + address.slice(3);
+        if (!address) return address;
+        const ethAddress = '0x' + address.slice(3);
+        return this.web3.utils.toChecksumAddress(ethAddress);
     }
 
     _convertEthToXdc(address) {
-        return 'xdc' + address.slice(2).toLowerCase();
+        if (!address) return address;
+        const cleanAddr = address.toLowerCase().replace('0x', '');
+        return 'xdc' + cleanAddr;
     }
 
     async getTaskReward(taskId) {
@@ -316,6 +320,12 @@ class Web3Service {
             const githubIssueId = `GH-${taskId}`;
             console.log('Getting task reward for:', githubIssueId);
             console.log('Using contract address:', this.contractAddress);
+            
+            // Convert addresses with proper checksum
+            const fromAddress = this._convertXdcToEth(this.account);
+            const contractAddress = this._convertXdcToEth(this.contractAddress);
+            console.log('From address:', fromAddress);
+            console.log('Contract address:', contractAddress);
 
             // Get the raw contract call
             const method = this.contract.methods.taskRewards(githubIssueId);
@@ -328,8 +338,8 @@ class Web3Service {
             while (retries > 0) {
                 try {
                     reward = await method.call({
-                        from: this._convertXdcToEth(this.account),
-                        to: this._convertXdcToEth(this.contractAddress)
+                        from: fromAddress,
+                        to: contractAddress
                     });
                     break;
                 } catch (error) {
@@ -363,13 +373,14 @@ class Web3Service {
                 throw new Error('Only the contract owner can set task rewards');
             }
 
-            const ethAccount = this._convertXdcToEth(this.account);
-            const ethContract = this._convertXdcToEth(this.contractAddress);
+            // Convert addresses with proper checksum
+            const fromAddress = this._convertXdcToEth(this.account);
+            const contractAddress = this._convertXdcToEth(this.contractAddress);
             const githubIssueId = `GH-${taskId}`;
             
             console.log('Setting task reward...');
-            console.log('Account:', ethAccount);
-            console.log('Contract:', ethContract);
+            console.log('From address:', fromAddress);
+            console.log('Contract address:', contractAddress);
             console.log('GitHub Issue ID:', githubIssueId);
             console.log('Reward:', reward);
 
@@ -381,21 +392,21 @@ class Web3Service {
             console.log('Method data:', method.encodeABI());
 
             // Get nonce and gas price
-            const nonce = await this.web3.eth.getTransactionCount(ethAccount);
+            const nonce = await this.web3.eth.getTransactionCount(fromAddress);
             const gasPrice = await this.web3.eth.getGasPrice();
             console.log('Nonce:', nonce);
             console.log('Gas Price:', gasPrice);
 
             // Try to estimate gas
             let gasLimit = await method.estimateGas({ 
-                from: ethAccount,
-                to: ethContract
+                from: fromAddress,
+                to: contractAddress
             }).catch(() => 500000);
 
             // Send transaction
             const txParams = {
-                from: ethAccount,
-                to: ethContract,
+                from: fromAddress,
+                to: contractAddress,
                 gas: gasLimit,
                 gasPrice: gasPrice,
                 nonce: nonce,
