@@ -259,7 +259,7 @@ class Web3Service {
 
             // Use checksummed addresses for contract interaction
             const checksummedAccount = this.web3.utils.toChecksumAddress(this.account);
-            const githubIssueId = `GH-${taskId.replace('task-', '')}`;
+            const githubIssueId = `GH-${taskId}`;
             
             console.log('Registering contribution...');
             console.log('Account:', checksummedAccount);
@@ -273,24 +273,30 @@ class Web3Service {
             console.log('Nonce:', nonce);
             console.log('Gas Price:', gasPrice);
 
-            // Estimate gas for the new contract method
-            const gasEstimate = await this.contract.methods.registerContribution(
-                checksummedAccount,
-                githubIssueId,
-                complexity
-            ).estimateGas({ 
-                from: checksummedAccount 
-            });
-            console.log('Gas Estimate:', gasEstimate);
+            try {
+                // Try to call the method first to check for revert reasons
+                await this.contract.methods.registerContribution(
+                    checksummedAccount,
+                    githubIssueId,
+                    complexity
+                ).call({ from: checksummedAccount });
+            } catch (callError) {
+                // Extract the revert reason
+                const revertReason = callError.message.match(/execution reverted: (.*?)"/)?.[1];
+                if (revertReason) {
+                    throw new Error(revertReason);
+                }
+                throw callError;
+            }
 
-            // Send transaction with the new parameters
+            // If call succeeds, send the actual transaction
             const promiEvent = this.contract.methods.registerContribution(
                 checksummedAccount,
                 githubIssueId,
                 complexity
             ).send({ 
                 from: checksummedAccount,
-                gas: Math.floor(gasEstimate * 1.2), // Add 20% buffer
+                gas: 500000, // Fixed gas limit to avoid estimation issues
                 gasPrice: gasPrice,
                 nonce: nonce
             });
@@ -307,8 +313,10 @@ class Web3Service {
                             resolve(receipt);
                         })
                         .once('error', (error) => {
-                            console.error('Transaction error:', error);
-                            reject(error);
+                            // Try to extract revert reason from error
+                            const revertReason = error.message.match(/execution reverted: (.*?)"/)?.[1];
+                            console.error('Transaction error:', revertReason || error);
+                            reject(new Error(revertReason || error.message));
                         });
                 })
             };

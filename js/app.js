@@ -264,6 +264,12 @@ const App = (function() {
                     errorMessage = 'Transaction was rejected in your wallet';
                 } else if (errorMessage.includes('insufficient funds')) {
                     errorMessage = 'Insufficient XDC balance for gas fees';
+                } else if (errorMessage.includes('Task already completed')) {
+                    errorMessage = 'This task has already been completed';
+                } else if (errorMessage.includes('Task not found')) {
+                    errorMessage = 'This task does not exist';
+                } else if (errorMessage.includes('-32603')) {
+                    errorMessage = 'Contract execution failed. Please check if you have enough XDC for gas fees.';
                 }
                 
                 errorStep.querySelector('.error-message').textContent = errorMessage;
