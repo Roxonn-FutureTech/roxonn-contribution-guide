@@ -281,12 +281,22 @@ class Web3Service {
                     complexity
                 ).call({ from: checksummedAccount });
             } catch (callError) {
-                // Extract the revert reason
-                const revertReason = callError.message.match(/execution reverted: (.*?)"/)?.[1];
-                if (revertReason) {
-                    throw new Error(revertReason);
+                // Extract the revert reason if available
+                if (callError.message) {
+                    const revertMatch = callError.message.match(/execution reverted: (.*?)"/);
+                    if (revertMatch && revertMatch[1]) {
+                        throw new Error(revertMatch[1]);
+                    }
+                    
+                    // Check for other common error patterns
+                    if (callError.message.includes('insufficient funds')) {
+                        throw new Error('Insufficient XDC balance for gas fees');
+                    }
+                    if (callError.message.includes('Task already completed')) {
+                        throw new Error('This task has already been completed');
+                    }
                 }
-                throw callError;
+                throw new Error('Contract call failed: ' + callError.message);
             }
 
             // If call succeeds, send the actual transaction
@@ -301,24 +311,16 @@ class Web3Service {
                 nonce: nonce
             });
 
-            // Return both the transaction hash and the confirmation promise
+            // Get transaction hash immediately
+            const transactionHash = await new Promise((resolve, reject) => {
+                promiEvent.on('transactionHash', (hash) => resolve(hash));
+                promiEvent.on('error', (error) => reject(error));
+            });
+
+            // Return both hash and confirmation promise
             return {
-                transactionHash: await new Promise((resolve) => {
-                    promiEvent.once('transactionHash', resolve);
-                }),
-                confirmation: new Promise((resolve, reject) => {
-                    promiEvent
-                        .once('confirmation', (confirmationNumber, receipt) => {
-                            console.log('Transaction confirmed:', receipt);
-                            resolve(receipt);
-                        })
-                        .once('error', (error) => {
-                            // Try to extract revert reason from error
-                            const revertReason = error.message.match(/execution reverted: (.*?)"/)?.[1];
-                            console.error('Transaction error:', revertReason || error);
-                            reject(new Error(revertReason || error.message));
-                        });
-                })
+                transactionHash,
+                confirmation: promiEvent
             };
         } catch (error) {
             console.error('Transaction error:', error);
