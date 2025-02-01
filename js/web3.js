@@ -238,26 +238,10 @@ class Web3Service {
 
     async registerContribution(taskId, complexity = 'easy') {
         try {
-            if (!this.contract) {
-                throw new Error('Contract not initialized');
+            if (!this.web3 || !this.contract || !this.account) {
+                throw new Error('Web3 not initialized. Please connect your wallet first.');
             }
 
-            // Get contract owner and compare with current account
-            const owner = await this.contract.methods.owner().call();
-            console.log('Contract owner:', owner);
-            console.log('Current account:', this.account);
-            
-            // Convert both addresses to lowercase for comparison
-            const normalizedOwner = owner.toLowerCase();
-            const normalizedAccount = this.account.toLowerCase();
-            console.log('Normalized owner:', normalizedOwner);
-            console.log('Normalized account:', normalizedAccount);
-            
-            if (normalizedOwner !== normalizedAccount) {
-                throw new Error('Only the contract owner can register contributions');
-            }
-
-            // Use checksummed addresses for contract interaction
             const checksummedAccount = this.web3.utils.toChecksumAddress(this.account);
             const githubIssueId = `GH-${taskId}`;
             
@@ -273,54 +257,62 @@ class Web3Service {
             console.log('Nonce:', nonce);
             console.log('Gas Price:', gasPrice);
 
-            try {
-                // Try to call the method first to check for revert reasons
-                await this.contract.methods.registerContribution(
-                    checksummedAccount,
-                    githubIssueId,
-                    complexity
-                ).call({ from: checksummedAccount });
-            } catch (callError) {
-                // Extract the revert reason if available
-                if (callError.message) {
-                    const revertMatch = callError.message.match(/execution reverted: (.*?)"/);
-                    if (revertMatch && revertMatch[1]) {
-                        throw new Error(revertMatch[1]);
-                    }
-                    
-                    // Check for other common error patterns
-                    if (callError.message.includes('insufficient funds')) {
-                        throw new Error('Insufficient XDC balance for gas fees');
-                    }
-                    if (callError.message.includes('Task already completed')) {
-                        throw new Error('This task has already been completed');
-                    }
-                }
-                throw new Error('Contract call failed: ' + callError.message);
-            }
-
-            // If call succeeds, send the actual transaction
-            const promiEvent = this.contract.methods.registerContribution(
+            // Create contract method
+            const method = this.contract.methods.registerContribution(
                 checksummedAccount,
                 githubIssueId,
                 complexity
-            ).send({ 
+            );
+
+            // Try to estimate gas first
+            let gasLimit;
+            try {
+                gasLimit = await method.estimateGas({ from: checksummedAccount });
+                console.log('Estimated gas:', gasLimit);
+                gasLimit = Math.floor(gasLimit * 1.2); // Add 20% buffer
+            } catch (gasError) {
+                console.warn('Gas estimation failed:', gasError);
+                if (gasError.message.includes('execution reverted')) {
+                    const revertMsg = gasError.message.match(/execution reverted: (.*?)(?:"|\}|$)/)?.[1];
+                    if (revertMsg) {
+                        throw new Error(revertMsg);
+                    }
+                }
+                // Use default gas limit if estimation fails
+                gasLimit = 500000;
+            }
+
+            // Send transaction
+            const promiEvent = method.send({ 
                 from: checksummedAccount,
-                gas: 500000, // Fixed gas limit to avoid estimation issues
+                gas: gasLimit,
                 gasPrice: gasPrice,
                 nonce: nonce
             });
 
             // Get transaction hash immediately
             const transactionHash = await new Promise((resolve, reject) => {
-                promiEvent.on('transactionHash', (hash) => resolve(hash));
-                promiEvent.on('error', (error) => reject(error));
+                promiEvent.once('transactionHash', (hash) => resolve(hash));
+                promiEvent.once('error', (error) => {
+                    if (error.message.includes('User denied')) {
+                        reject(new Error('Transaction was rejected in your wallet'));
+                    } else if (error.message.includes('insufficient funds')) {
+                        reject(new Error('Insufficient XDC balance for gas fees'));
+                    } else {
+                        reject(error);
+                    }
+                });
             });
 
             // Return both hash and confirmation promise
             return {
                 transactionHash,
-                confirmation: promiEvent
+                confirmation: promiEvent.then((receipt) => {
+                    if (!receipt.status) {
+                        throw new Error('Transaction failed');
+                    }
+                    return receipt;
+                })
             };
         } catch (error) {
             console.error('Transaction error:', error);
