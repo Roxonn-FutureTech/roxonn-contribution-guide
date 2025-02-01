@@ -28,6 +28,62 @@ const CONTRACT_ABI = [
         ],
         "stateMutability": "view",
         "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "githubIssueId",
+                "type": "string"
+            },
+            {
+                "internalType": "uint256",
+                "name": "reward",
+                "type": "uint256"
+            }
+        ],
+        "name": "setTaskReward",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "githubIssueId",
+                "type": "string"
+            }
+        ],
+        "name": "taskRewards",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "githubIssueId",
+                "type": "string"
+            }
+        ],
+        "name": "completedTasks",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
     }
 ];
 
@@ -226,16 +282,100 @@ class Web3Service {
         }
     }
 
+    async setTaskReward(taskId, reward) {
+        try {
+            if (!this.web3 || !this.contract || !this.account) {
+                throw new Error('Web3 not initialized. Please connect your wallet first.');
+            }
+
+            const checksummedAccount = this.web3.utils.toChecksumAddress(this.account);
+            const checksummedContract = this.web3.utils.toChecksumAddress(this.contractAddress.replace('xdc', '0x'));
+            const githubIssueId = `GH-${taskId}`;
+            
+            console.log('Setting task reward...');
+            console.log('Account:', checksummedAccount);
+            console.log('GitHub Issue ID:', githubIssueId);
+            console.log('Reward:', reward);
+
+            // Create contract method
+            const method = this.contract.methods.setTaskReward(
+                githubIssueId,
+                this.web3.utils.toWei(reward.toString(), 'ether')
+            );
+
+            // Get nonce and gas price
+            const nonce = await this.web3.eth.getTransactionCount(this.account);
+            const gasPrice = await this.web3.eth.getGasPrice();
+
+            // Try to estimate gas
+            let gasLimit = await method.estimateGas({ 
+                from: checksummedAccount 
+            }).catch(() => 500000); // Default gas limit if estimation fails
+
+            // Send transaction
+            const receipt = await method.send({ 
+                from: checksummedAccount,
+                gas: gasLimit,
+                gasPrice: gasPrice,
+                nonce: nonce
+            });
+
+            return receipt;
+        } catch (error) {
+            console.error('Set task reward error:', error);
+            throw error;
+        }
+    }
+
+    async getTaskReward(taskId) {
+        try {
+            if (!this.contract) {
+                throw new Error('Contract not initialized');
+            }
+
+            const githubIssueId = `GH-${taskId}`;
+            const reward = await this.contract.methods.taskRewards(githubIssueId).call();
+            return this.web3.utils.fromWei(reward, 'ether');
+        } catch (error) {
+            console.error('Get task reward error:', error);
+            throw error;
+        }
+    }
+
+    async isTaskCompleted(taskId) {
+        try {
+            if (!this.contract) {
+                throw new Error('Contract not initialized');
+            }
+
+            const githubIssueId = `GH-${taskId}`;
+            return await this.contract.methods.completedTasks(githubIssueId).call();
+        } catch (error) {
+            console.error('Check task completion error:', error);
+            throw error;
+        }
+    }
+
     async registerContribution(taskId, complexity = 'easy') {
         try {
             if (!this.web3 || !this.contract || !this.account) {
                 throw new Error('Web3 not initialized. Please connect your wallet first.');
             }
 
-            // Convert addresses to checksum format
             const checksummedAccount = this.web3.utils.toChecksumAddress(this.account);
             const checksummedContract = this.web3.utils.toChecksumAddress(this.contractAddress.replace('xdc', '0x'));
             const githubIssueId = `GH-${taskId}`;
+            
+            // Check if task exists and is not completed
+            const reward = await this.getTaskReward(taskId);
+            if (reward === '0') {
+                throw new Error('Task reward not set. Please contact the repository owner.');
+            }
+
+            const isCompleted = await this.isTaskCompleted(taskId);
+            if (isCompleted) {
+                throw new Error('This task has already been completed');
+            }
             
             console.log('Registering contribution...');
             console.log('Account:', checksummedAccount);
@@ -250,51 +390,24 @@ class Web3Service {
             console.log('Gas Price:', gasPrice);
 
             // Create contract method
-            const method = this.contract.methods.registerContribution(
-                githubIssueId
-            );
+            const method = this.contract.methods.registerContribution(githubIssueId);
 
             // Try to estimate gas first
             let gasLimit;
             try {
                 gasLimit = await method.estimateGas({ 
-                    from: checksummedAccount,
-                    to: checksummedContract
+                    from: checksummedAccount
                 });
                 console.log('Estimated gas:', gasLimit);
                 gasLimit = Math.floor(gasLimit * 1.2); // Add 20% buffer
             } catch (gasError) {
                 console.warn('Gas estimation failed:', gasError);
-                
-                // Check for specific error messages
-                const errorMessage = gasError?.message || '';
-                
-                if (errorMessage.includes('execution reverted')) {
-                    const revertMsg = errorMessage.match(/execution reverted: (.*?)(?:"|\}|$)/)?.[1];
-                    if (revertMsg) {
-                        if (revertMsg.includes('Task already completed')) {
-                            throw new Error('This task has already been completed');
-                        } else if (revertMsg.includes('Task not found')) {
-                            throw new Error('Task reward not set. Please contact the repository owner.');
-                        } else {
-                            throw new Error(revertMsg);
-                        }
-                    }
-                }
-                
-                if (errorMessage.includes('insufficient funds')) {
-                    throw new Error('Insufficient XDC balance for gas fees');
-                }
-
-                // For RPC errors or other issues, use default gas
-                console.log('Using default gas limit');
-                gasLimit = 500000;
+                gasLimit = 500000; // Use default gas limit
             }
 
             // Send transaction
             const promiEvent = method.send({ 
                 from: checksummedAccount,
-                to: checksummedContract,
                 gas: gasLimit,
                 gasPrice: gasPrice,
                 nonce: nonce
@@ -309,14 +422,7 @@ class Web3Service {
                 promiEvent.once('error', (error) => {
                     const errorMessage = error?.message || 'Transaction failed';
                     console.error('Transaction error:', errorMessage);
-                    
-                    if (errorMessage.includes('User denied')) {
-                        reject(new Error('Transaction was rejected in your wallet'));
-                    } else if (errorMessage.includes('insufficient funds')) {
-                        reject(new Error('Insufficient XDC balance for gas fees'));
-                    } else {
-                        reject(new Error(errorMessage));
-                    }
+                    reject(new Error(errorMessage));
                 });
             });
 
