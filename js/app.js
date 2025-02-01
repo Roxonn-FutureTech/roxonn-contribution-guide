@@ -281,6 +281,31 @@ const App = (function() {
         showStep(currentStep);
     }
 
+    // Set task reward
+    async function setReward() {
+        try {
+            const taskId = document.getElementById('taskId').value;
+            if (!taskId) {
+                throw new Error('Please enter a task ID');
+            }
+
+            const isOwner = await web3Service.isContractOwner();
+            if (!isOwner) {
+                throw new Error('Only the contract owner can set task rewards');
+            }
+
+            // Set a default reward of 10 XDC
+            const result = await web3Service.setTaskReward(taskId, '10');
+            console.log('Set reward result:', result);
+
+            // Show success message
+            showMessage('Task reward set successfully! You can now register contributions.', 'success');
+        } catch (error) {
+            console.error('Set reward error:', error);
+            showMessage(error.message, 'error');
+        }
+    }
+
     // Public API
     return {
         init,
@@ -288,9 +313,13 @@ const App = (function() {
         handleContribution,
         nextStep,
         claimReward,
-        closeModal
+        closeModal,
+        setReward
     };
 })();
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', App.init);
+
+// Add setReward function to window object
+window.setReward = App.setReward;

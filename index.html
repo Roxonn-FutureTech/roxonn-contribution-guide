@@ -425,13 +425,22 @@ git checkout -b feature/task-<span class="task-number"></span></pre>
                         <div class="mb-6">
                             <h4 class="font-bold mb-2">Task Requirements:</h4>
                             <div class="task-requirements text-gray-300 mb-4"></div>
-                            <div class="code-block">
-                                <div class="code-header flex justify-between items-center">
-                                    <span>Git Status</span>
-                                </div>
-                                <pre class="command-text">git add .
-git commit -m "feat: implement task requirements"</pre>
+                            
+                            <!-- Task ID Input -->
+                            <div class="mb-4">
+                                <label for="taskId" class="block text-sm font-medium mb-2">Task ID</label>
+                                <input type="text" id="taskId" name="taskId" placeholder="Enter task ID (e.g. 1)" 
+                                    class="w-full px-3 py-2 border border-gray-700 rounded-md bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
                             </div>
+
+                            <!-- Set Reward Button (Owner Only) -->
+                            <div class="mb-4">
+                                <button onclick="setReward()" class="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-md transition duration-150 ease-in-out">
+                                    Set Task Reward (Owner Only)
+                                </button>
+                            </div>
+
+                            <button onclick="App.claimReward()" class="contribute-btn w-full">Register Contribution</button>
                         </div>
                         <button onclick="App.nextStep()" class="contribute-btn w-full">Next Step</button>
                     </div>
