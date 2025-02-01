@@ -242,7 +242,9 @@ class Web3Service {
                 throw new Error('Web3 not initialized. Please connect your wallet first.');
             }
 
+            // Convert addresses to checksum format
             const checksummedAccount = this.web3.utils.toChecksumAddress(this.account);
+            const checksummedContract = this.web3.utils.toChecksumAddress(this.contractAddress.replace('xdc', '0x'));
             const githubIssueId = `GH-${taskId}`;
             
             console.log('Registering contribution...');
@@ -267,7 +269,10 @@ class Web3Service {
             // Try to estimate gas first
             let gasLimit;
             try {
-                gasLimit = await method.estimateGas({ from: checksummedAccount });
+                gasLimit = await method.estimateGas({ 
+                    from: checksummedAccount,
+                    to: checksummedContract
+                });
                 console.log('Estimated gas:', gasLimit);
                 gasLimit = Math.floor(gasLimit * 1.2); // Add 20% buffer
             } catch (gasError) {
@@ -287,18 +292,15 @@ class Web3Service {
                     throw new Error('Insufficient XDC balance for gas fees');
                 }
 
-                if (errorMessage.includes('-32603')) {
-                    console.log('Internal RPC error, using default gas limit');
-                    gasLimit = 500000;
-                } else {
-                    // For any other error, use default gas limit
-                    gasLimit = 500000;
-                }
+                // For RPC errors or other issues, use default gas
+                console.log('Using default gas limit');
+                gasLimit = 500000;
             }
 
             // Send transaction
             const promiEvent = method.send({ 
                 from: checksummedAccount,
+                to: checksummedContract,
                 gas: gasLimit,
                 gasPrice: gasPrice,
                 nonce: nonce
@@ -306,9 +308,13 @@ class Web3Service {
 
             // Get transaction hash immediately
             const transactionHash = await new Promise((resolve, reject) => {
-                promiEvent.once('transactionHash', (hash) => resolve(hash));
+                promiEvent.once('transactionHash', (hash) => {
+                    console.log('Transaction hash:', hash);
+                    resolve(hash);
+                });
                 promiEvent.once('error', (error) => {
                     const errorMessage = error?.message || 'Transaction failed';
+                    console.error('Transaction error:', errorMessage);
                     
                     if (errorMessage.includes('User denied')) {
                         reject(new Error('Transaction was rejected in your wallet'));
@@ -324,10 +330,14 @@ class Web3Service {
             return {
                 transactionHash,
                 confirmation: promiEvent.then((receipt) => {
+                    console.log('Transaction receipt:', receipt);
                     if (!receipt?.status) {
                         throw new Error('Transaction failed');
                     }
                     return receipt;
+                }).catch((error) => {
+                    console.error('Confirmation error:', error);
+                    throw error;
                 })
             };
         } catch (error) {

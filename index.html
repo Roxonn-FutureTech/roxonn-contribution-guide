@@ -191,6 +191,74 @@
             white-space: pre;
             overflow-x: auto;
         }
+
+        /* Loading Animation */
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #2d3748;
+            border-top: 5px solid #4299e1;
+            border-radius: 50%;
+            margin: 20px auto;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-step {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .loading-step p {
+            margin-top: 1rem;
+            color: #a0aec0;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Success and Error Icons */
+        .success-icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto;
+            border-radius: 50%;
+            background: #48bb78;
+            color: white;
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .error-icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto;
+            border-radius: 50%;
+            background: #f56565;
+            color: white;
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Transaction Status */
+        .transaction-hash {
+            word-break: break-all;
+            font-family: monospace;
+            padding: 0.5rem;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 0.25rem;
+        }
+
+        .tokens-earned {
+            color: #48bb78;
+            font-size: 1.25rem;
+            margin-top: 1rem;
+        }
     </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-gray-900 to-black text-white">
