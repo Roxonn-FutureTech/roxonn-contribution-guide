@@ -299,6 +299,58 @@ class Web3Service {
         }
     }
 
+    _convertXdcToEth(address) {
+        return '0x' + address.slice(3);
+    }
+
+    _convertEthToXdc(address) {
+        return 'xdc' + address.slice(2).toLowerCase();
+    }
+
+    async getTaskReward(taskId) {
+        try {
+            if (!this.contract) {
+                throw new Error('Contract not initialized');
+            }
+
+            const githubIssueId = `GH-${taskId}`;
+            console.log('Getting task reward for:', githubIssueId);
+            console.log('Using contract address:', this.contractAddress);
+
+            // Get the raw contract call
+            const method = this.contract.methods.taskRewards(githubIssueId);
+            console.log('Method data:', method.encodeABI());
+
+            // Call the method with retries
+            let retries = 3;
+            let reward = '0';
+            
+            while (retries > 0) {
+                try {
+                    reward = await method.call({
+                        from: this._convertXdcToEth(this.account),
+                        to: this._convertXdcToEth(this.contractAddress)
+                    });
+                    break;
+                } catch (error) {
+                    console.error(`Task reward call failed (${retries} retries left):`, error);
+                    retries--;
+                    if (retries > 0) {
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    }
+                }
+            }
+
+            console.log('Raw reward value:', reward);
+            const rewardInEther = this.web3.utils.fromWei(reward, 'ether');
+            console.log('Reward in ether:', rewardInEther);
+            return rewardInEther;
+        } catch (error) {
+            console.error('Get task reward error:', error);
+            return '0';
+        }
+    }
+
     async setTaskReward(taskId, reward) {
         try {
             if (!this.web3 || !this.contract || !this.account) {
@@ -311,12 +363,13 @@ class Web3Service {
                 throw new Error('Only the contract owner can set task rewards');
             }
 
-            const checksummedAccount = this.web3.utils.toChecksumAddress(this.account);
-            const checksummedContract = this.web3.utils.toChecksumAddress(this.contractAddress.replace('xdc', '0x'));
+            const ethAccount = this._convertXdcToEth(this.account);
+            const ethContract = this._convertXdcToEth(this.contractAddress);
             const githubIssueId = `GH-${taskId}`;
             
             console.log('Setting task reward...');
-            console.log('Account:', checksummedAccount);
+            console.log('Account:', ethAccount);
+            console.log('Contract:', ethContract);
             console.log('GitHub Issue ID:', githubIssueId);
             console.log('Reward:', reward);
 
@@ -328,20 +381,21 @@ class Web3Service {
             console.log('Method data:', method.encodeABI());
 
             // Get nonce and gas price
-            const nonce = await this.web3.eth.getTransactionCount(this.account);
+            const nonce = await this.web3.eth.getTransactionCount(ethAccount);
             const gasPrice = await this.web3.eth.getGasPrice();
             console.log('Nonce:', nonce);
             console.log('Gas Price:', gasPrice);
 
             // Try to estimate gas
             let gasLimit = await method.estimateGas({ 
-                from: checksummedAccount 
-            }).catch(() => 500000); // Default gas limit if estimation fails
+                from: ethAccount,
+                to: ethContract
+            }).catch(() => 500000);
 
             // Send transaction
             const txParams = {
-                from: checksummedAccount,
-                to: checksummedContract,
+                from: ethAccount,
+                to: ethContract,
                 gas: gasLimit,
                 gasPrice: gasPrice,
                 nonce: nonce,
@@ -382,81 +436,14 @@ class Web3Service {
         }
     }
 
-    async getTaskReward(taskId) {
-        try {
-            if (!this.contract) {
-                throw new Error('Contract not initialized');
-            }
-
-            const githubIssueId = `GH-${taskId}`;
-            console.log('Getting task reward for:', githubIssueId);
-            console.log('Using contract address:', this.contractAddress);
-
-            // Get the raw contract call
-            const method = this.contract.methods.taskRewards(githubIssueId);
-            console.log('Method data:', method.encodeABI());
-
-            // Call the method with retries
-            let retries = 3;
-            let reward = '0';
-            while (retries > 0) {
-                try {
-                    reward = await method.call();
-                    break;
-                } catch (error) {
-                    console.error(`Task reward call failed (${retries} retries left):`, error);
-                    retries--;
-                    if (retries > 0) {
-                        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2s between retries
-                    }
-                }
-            }
-
-            console.log('Raw reward value:', reward);
-            const rewardInEther = this.web3.utils.fromWei(reward, 'ether');
-            console.log('Reward in ether:', rewardInEther);
-            return rewardInEther;
-        } catch (error) {
-            console.error('Get task reward error:', error);
-            return '0';
-        }
-    }
-
-    async isTaskCompleted(taskId) {
-        try {
-            if (!this.contract) {
-                throw new Error('Contract not initialized');
-            }
-
-            const githubIssueId = `GH-${taskId}`;
-            console.log('Checking completion for:', githubIssueId);
-
-            // Get the raw contract call
-            const method = this.contract.methods.completedTasks(githubIssueId);
-            console.log('Method data:', method.encodeABI());
-
-            // Call the method
-            const completed = await method.call().catch(error => {
-                console.error('Task completion check failed:', error);
-                return false;
-            });
-
-            console.log('Task completion status:', completed);
-            return completed;
-        } catch (error) {
-            console.error('Check task completion error:', error);
-            return false;
-        }
-    }
-
     async registerContribution(taskId, complexity = 'easy') {
         try {
             if (!this.web3 || !this.contract || !this.account) {
                 throw new Error('Web3 not initialized. Please connect your wallet first.');
             }
 
-            const checksummedAccount = this.web3.utils.toChecksumAddress(this.account);
-            const checksummedContract = this.web3.utils.toChecksumAddress(this.contractAddress.replace('xdc', '0x'));
+            const ethAccount = this._convertXdcToEth(this.account);
+            const ethContract = this._convertXdcToEth(this.contractAddress);
             const githubIssueId = `GH-${taskId}`;
             
             console.log('Contract instance:', this.contract);
@@ -486,13 +473,13 @@ class Web3Service {
             }
             
             console.log('Registering contribution...');
-            console.log('Account:', checksummedAccount);
+            console.log('Account:', ethAccount);
             console.log('GitHub Issue ID:', githubIssueId);
             console.log('Complexity:', complexity);
-            console.log('Contract Address:', this.contractAddress);
+            console.log('Contract Address:', ethContract);
 
             // Get nonce and gas price
-            const nonce = await this.web3.eth.getTransactionCount(this.account);
+            const nonce = await this.web3.eth.getTransactionCount(ethAccount);
             const gasPrice = await this.web3.eth.getGasPrice();
             console.log('Nonce:', nonce);
             console.log('Gas Price:', gasPrice);
@@ -502,23 +489,15 @@ class Web3Service {
             console.log('Method data:', method.encodeABI());
 
             // Try to estimate gas first
-            let gasLimit;
-            try {
-                gasLimit = await method.estimateGas({ 
-                    from: checksummedAccount
-                });
-                console.log('Estimated gas:', gasLimit);
-                gasLimit = Math.floor(gasLimit * 1.2); // Add 20% buffer
-            } catch (gasError) {
-                console.warn('Gas estimation failed:', gasError);
-                console.log('Using default gas limit');
-                gasLimit = 500000; // Use default gas limit
-            }
+            let gasLimit = await method.estimateGas({ 
+                from: ethAccount,
+                to: ethContract
+            }).catch(() => 500000);
 
             // Send transaction
             const txParams = {
-                from: checksummedAccount,
-                to: checksummedContract,
+                from: ethAccount,
+                to: ethContract,
                 gas: gasLimit,
                 gasPrice: gasPrice,
                 nonce: nonce,
