@@ -181,42 +181,57 @@ const App = (function() {
     // Handle contribution registration
     async function handleContribution(button) {
         const modal = document.querySelector('.workflow-modal');
-        const taskCard = document.querySelector('.task-card');
+        const steps = modal.querySelectorAll('.step');
+        const loadingStep = modal.querySelector('.loading-step');
+        const taskCard = button.closest('.task-card');
         const taskId = taskCard.dataset.taskId;
         
         try {
-            if (!web3Service) {
-                throw new Error('Web3 service not initialized');
-            }
-            
             // Show loading state
-            const loadingStep = modal.querySelector('.loading-step');
-            const allSteps = modal.querySelectorAll('.step');
-            allSteps.forEach(step => step.classList.remove('active'));
+            steps.forEach(step => step.classList.remove('active'));
             loadingStep.classList.add('active');
-            
+            loadingStep.querySelector('p').textContent = 'Please confirm the transaction in your wallet...';
+
             // Register contribution
-            const txHash = await web3Service.registerContribution(taskId);
+            const receipt = await web3Service.registerContribution(`GH-${taskId.replace('task-', '')}`);
             
-            // Show success state
-            const successStep = modal.querySelector('.success-step');
-            allSteps.forEach(step => step.classList.remove('active'));
-            successStep.classList.add('active');
-            
-            // Update success message
-            const complexity = taskCard.dataset.complexity;
-            const rewardAmount = getRewardAmount(complexity);
-            successStep.querySelector('.transaction-hash').textContent = `Transaction: ${txHash}`;
-            successStep.querySelector('.tokens-earned').textContent = `You earned ${rewardAmount} ROXN!`;
-            
+            if (receipt && receipt.status) {
+                // Show success state
+                const successStep = modal.querySelector('.success-step');
+                steps.forEach(step => step.classList.remove('active'));
+                successStep.classList.add('active');
+                
+                // Update success message
+                const complexity = taskCard.dataset.complexity || 'easy';
+                const rewardAmount = getRewardAmount(complexity);
+                const xdcHash = receipt.transactionHash.replace('0x', 'xdc');
+                const explorerLink = `https://explorer.apothem.network/tx/${xdcHash}`;
+                
+                successStep.querySelector('.transaction-hash').innerHTML = 
+                    `Transaction: <a href="${explorerLink}" target="_blank" class="text-blue-400 hover:text-blue-300">
+                        ${xdcHash}
+                    </a>`;
+                successStep.querySelector('.tokens-earned').textContent = 
+                    `You earned ${rewardAmount} ROXN!`;
+            } else {
+                throw new Error('Transaction failed');
+            }
         } catch (error) {
             console.error('Contribution error:', error);
             
             // Show error state
             const errorStep = modal.querySelector('.error-step');
-            allSteps.forEach(step => step.classList.remove('active'));
+            steps.forEach(step => step.classList.remove('active'));
             errorStep.classList.add('active');
-            errorStep.querySelector('.error-message').textContent = error.message;
+            
+            let errorMessage = error.message || 'Transaction failed';
+            if (errorMessage.includes('User denied')) {
+                errorMessage = 'Transaction was rejected in your wallet';
+            } else if (errorMessage.includes('insufficient funds')) {
+                errorMessage = 'Insufficient XDC balance for gas fees';
+            }
+            
+            errorStep.querySelector('.error-message').textContent = errorMessage;
         }
     }
 

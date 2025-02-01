@@ -237,113 +237,72 @@ class Web3Service {
     }
 
     async registerContribution(taskId) {
-        const modal = document.querySelector('.workflow-modal');
-        const loadingStep = modal.querySelector('.loading-step');
-        const allSteps = modal.querySelectorAll('.step');
-        
         try {
-            if (!this.account) {
-                this.handleError(modal, allSteps, new Error('Please connect your wallet first'));
-                return;
+            if (!this.contract) {
+                throw new Error('Contract not initialized');
             }
 
-            if (!this.contract || !this.tokenContract) {
-                this.handleError(modal, allSteps, new Error('Contracts not initialized. Please refresh the page.'));
-                return;
+            // Get contract owner and compare with current account
+            const owner = await this.contract.methods.owner().call();
+            console.log('Contract owner:', owner);
+            console.log('Current account:', this.account);
+            
+            // Convert both addresses to lowercase for comparison
+            const normalizedOwner = owner.toLowerCase();
+            const normalizedAccount = this.account.toLowerCase();
+            console.log('Normalized owner:', normalizedOwner);
+            console.log('Normalized account:', normalizedAccount);
+            
+            if (normalizedOwner !== normalizedAccount) {
+                throw new Error('Only the contract owner can register contributions');
             }
 
-            // Show loading state
-            allSteps.forEach(step => step.classList.remove('active'));
-            loadingStep.classList.add('active');
-            loadingStep.querySelector('p').textContent = 'Please confirm the transaction in your wallet...';
+            // Use checksummed addresses for contract interaction
+            const checksummedAccount = this.web3.utils.toChecksumAddress(this.account);
+            
+            console.log('Registering contribution...');
+            console.log('Account:', checksummedAccount);
+            console.log('Task ID:', taskId);
+            console.log('Contract Address:', this.contractAddress);
 
-            // Get task complexity from the UI
-            const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
-            const complexity = taskElement.getAttribute('data-complexity') || 'easy';
+            // Get nonce
+            const nonce = await this.web3.eth.getTransactionCount(this.account);
+            console.log('Nonce:', nonce);
 
-            try {
-                // Verify network again before transaction
-                const network = await this.web3.eth.getChainId();
-                if ('0x' + network.toString(16) !== this.chainId) {
-                    throw new Error('Please connect to XDC Network');
-                }
+            // Get gas price
+            const gasPrice = await this.web3.eth.getGasPrice();
+            console.log('Gas Price:', gasPrice);
 
-                // Check if user is contract owner
-                if (!this.isOwner) {
-                    const owner = await this.contract.methods.owner().call();
-                    console.log('Contract owner:', owner);
-                    console.log('Current account:', this.account);
-                    throw new Error('Only the contract owner can register contributions');
-                }
+            // Estimate gas
+            const gasEstimate = await this.contract.methods.registerContribution(
+                checksummedAccount,
+                taskId,
+                'easy'
+            ).estimateGas({ 
+                from: checksummedAccount 
+            });
+            console.log('Gas Estimate:', gasEstimate);
 
-                // Update progress dots for transaction
-                const transactionDot = document.querySelector('.step-dot[data-step="5"]');
-                transactionDot.classList.add('active');
-                document.querySelector('.progress-line').style.setProperty('--progress', '100%');
+            // Prepare transaction
+            const txParams = {
+                from: checksummedAccount,
+                gas: Math.floor(gasEstimate * 1.2), // Add 20% buffer
+                gasPrice: gasPrice,
+                nonce: nonce
+            };
 
-                // Use checksummed addresses for contract interaction
-                const checksummedAccount = this.web3.utils.toChecksumAddress(this.account);
-                
-                console.log('Registering contribution...');
-                console.log('Account:', checksummedAccount);
-                console.log('Task ID:', `GH-${taskId.replace('task-', '')}`);
-                console.log('Complexity:', complexity);
-                console.log('Contract Address:', this.contractAddress);
+            // Send transaction
+            const receipt = await this.contract.methods.registerContribution(
+                checksummedAccount,
+                taskId,
+                'easy'
+            ).send(txParams);
 
-                // Estimate gas first
-                const gasEstimate = await this.contract.methods.registerContribution(
-                    checksummedAccount,
-                    `GH-${taskId.replace('task-', '')}`,
-                    complexity
-                ).estimateGas({ 
-                    from: checksummedAccount
-                });
+            console.log('Transaction successful:', receipt);
+            return receipt;
 
-                console.log('Estimated gas:', gasEstimate);
-
-                // Send transaction with estimated gas + buffer
-                const tx = await this.contract.methods.registerContribution(
-                    checksummedAccount,
-                    `GH-${taskId.replace('task-', '')}`,
-                    complexity
-                ).send({ 
-                    from: checksummedAccount,
-                    gas: Math.floor(gasEstimate * 1.2) // Add 20% buffer
-                });
-
-                // Update loading message
-                loadingStep.querySelector('p').textContent = 'Transaction submitted, waiting for confirmation...';
-
-                // Wait for transaction receipt with timeout
-                console.log('Waiting for transaction receipt...');
-                const receipt = await this.waitForReceipt(tx.transactionHash);
-                
-                if (receipt.status) {
-                    console.log('Transaction confirmed:', receipt);
-                    this.handleSuccess(modal, allSteps, tx, complexity);
-                } else {
-                    throw new Error('Transaction failed. Please check the block explorer.');
-                }
-
-                return tx.transactionHash;
-            } catch (error) {
-                console.error('Transaction error:', error);
-                
-                // Check for specific error messages in the error or error.message
-                const errorMessage = error.message || '';
-                
-                if (errorMessage.includes('execution reverted')) {
-                    const customError = new Error('Transaction failed: The contract rejected the operation. Make sure you are the contract owner.');
-                    this.handleError(modal, allSteps, customError);
-                } else {
-                    this.handleError(modal, allSteps, error);
-                }
-                
-                throw error;
-            }
         } catch (error) {
-            console.error('Error registering contribution:', error);
-            this.handleError(modal, allSteps, error);
+            console.error('Transaction error:', error);
             throw error;
         }
     }
