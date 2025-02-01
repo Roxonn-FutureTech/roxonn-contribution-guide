@@ -2,6 +2,8 @@
 const App = (function() {
     // Private variables
     let web3Service = null;
+    let currentStep = 0;
+    const steps = ['start-step', 'clone-step', 'code-step', 'submit-step', 'reward-step'];
 
     // Initialize everything when the page loads
     function init() {
@@ -94,14 +96,9 @@ const App = (function() {
     // Get reward amount based on complexity
     function getRewardAmount(complexity) {
         switch (complexity.toLowerCase()) {
-            case 'easy':
-                return 100;
-            case 'medium':
-                return 200;
-            case 'hard':
-                return 300;
-            default:
-                return 100;
+            case 'hard': return '300 ROXN';
+            case 'medium': return '200 ROXN';
+            default: return '100 ROXN';
         }
     }
 
@@ -116,27 +113,57 @@ const App = (function() {
         });
     }
 
-    // Next step in workflow
-    function nextStep() {
+    // Show step in workflow
+    function showStep(stepIndex) {
         const modal = document.querySelector('.workflow-modal');
-        const currentStep = modal.querySelector('.step.active');
-        const steps = ['initial-step', 'clone-step', 'code-step', 'submit-step', 'reward-step'];
+        const allSteps = modal.querySelectorAll('.step');
+        const stepDots = modal.querySelectorAll('.step-dot');
         
-        // Find current step index
-        const currentIndex = steps.findIndex(step => currentStep.classList.contains(step));
-        if (currentIndex < steps.length - 1) {
-            // Update progress dots
-            const dots = document.querySelectorAll('.step-dot');
-            dots[currentIndex + 1].classList.add('active');
+        allSteps.forEach(step => step.classList.remove('active'));
+        stepDots.forEach(dot => dot.classList.remove('active'));
+        
+        const currentStepElement = modal.querySelector(`.${steps[stepIndex]}`);
+        if (currentStepElement) {
+            currentStepElement.classList.add('active');
+        }
+        
+        // Update progress dots
+        for (let i = 0; i <= stepIndex; i++) {
+            stepDots[i]?.classList.add('active');
+        }
+
+        // Update task-specific content
+        const taskCard = document.querySelector('.task-card.active');
+        if (taskCard) {
+            const taskId = taskCard.getAttribute('data-task-id');
+            const complexity = taskCard.getAttribute('data-complexity');
             
-            // Update progress line
-            const progress = ((currentIndex + 2) / steps.length) * 100;
-            document.querySelector('.progress-line').style.setProperty('--progress', `${progress}%`);
-            
-            // Show next step
-            currentStep.classList.remove('active');
-            const nextStep = document.querySelector(`.${steps[currentIndex + 1]}`);
-            if (nextStep) nextStep.classList.add('active');
+            // Update task number in clone step
+            document.querySelectorAll('.task-number').forEach(el => {
+                el.textContent = taskId;
+            });
+
+            // Update task requirements in code step
+            const requirementsEl = document.querySelector('.task-requirements');
+            if (requirementsEl) {
+                requirementsEl.textContent = taskCard.querySelector('p').textContent;
+            }
+
+            // Update reward info in reward step
+            const complexityLabel = document.querySelector('.complexity-label');
+            const rewardAmount = document.querySelector('.reward-amount');
+            if (complexityLabel && rewardAmount) {
+                complexityLabel.textContent = complexity.charAt(0).toUpperCase() + complexity.slice(1);
+                rewardAmount.textContent = getRewardAmount(complexity);
+            }
+        }
+    }
+
+    // Next step in workflow
+    async function nextStep() {
+        currentStep++;
+        if (currentStep < steps.length) {
+            showStep(currentStep);
         }
     }
 
@@ -158,59 +185,33 @@ const App = (function() {
     function closeModal() {
         const modal = document.querySelector('.workflow-modal');
         modal.classList.add('hidden');
-        
-        // Reset progress
-        document.querySelector('.progress-line').style.setProperty('--progress', '0%');
-        
-        // Reset steps
-        const steps = modal.querySelectorAll('.step');
-        steps.forEach(step => step.classList.remove('active'));
-        modal.querySelector('.initial-step').classList.add('active');
-        
-        // Reset dots
-        const dots = document.querySelectorAll('.step-dot');
-        dots.forEach((dot, index) => {
-            if (index === 0) {
-                dot.classList.add('active');
-            } else {
-                dot.classList.remove('active');
-            }
-        });
+        currentStep = 0;
+        showStep(currentStep);
     }
 
-    // Handle contribution registration
-    async function handleContribution(button) {
+    // Claim reward
+    async function claimReward() {
         try {
             const modal = document.querySelector('.workflow-modal');
-            if (!modal) {
-                throw new Error('Modal not found');
-            }
-
-            // Find the task card that contains this button
-            const taskCard = button.closest('.task-card');
+            const taskCard = document.querySelector('.task-card.active');
+            
             if (!taskCard) {
-                throw new Error('Task card not found');
+                throw new Error('Task not found');
             }
 
             const taskId = taskCard.getAttribute('data-task-id');
-            if (!taskId) {
-                throw new Error('Task ID not found');
-            }
-
             const complexity = taskCard.getAttribute('data-complexity') || 'easy';
-            const steps = modal.querySelectorAll('.step');
-            const loadingStep = modal.querySelector('.loading-step');
             
             // Show loading state
-            modal.classList.remove('hidden');
-            steps.forEach(step => step.classList.remove('active'));
+            const allSteps = modal.querySelectorAll('.step');
+            const loadingStep = modal.querySelector('.loading-step');
+            
+            allSteps.forEach(step => step.classList.remove('active'));
             loadingStep.classList.add('active');
-            loadingStep.querySelector('p').textContent = 'Please confirm the transaction in your wallet...';
-
+            
             // Register contribution
             const { transactionHash, confirmation } = await web3Service.registerContribution(taskId, complexity);
             
-            // Update UI to show transaction is pending
             loadingStep.querySelector('p').textContent = 'Transaction submitted, waiting for confirmation...';
             
             // Wait for confirmation
@@ -219,7 +220,7 @@ const App = (function() {
             if (receipt && receipt.status) {
                 // Show success state
                 const successStep = modal.querySelector('.success-step');
-                steps.forEach(step => step.classList.remove('active'));
+                allSteps.forEach(step => step.classList.remove('active'));
                 successStep.classList.add('active');
                 
                 // Update success message
@@ -232,9 +233,10 @@ const App = (function() {
                         ${xdcHash}
                     </a>`;
                 successStep.querySelector('.tokens-earned').textContent = 
-                    `You earned ${rewardAmount} ROXN!`;
+                    `You earned ${rewardAmount}!`;
 
-                // Disable the contribute button
+                // Update task card
+                const button = taskCard.querySelector('button');
                 button.disabled = true;
                 button.textContent = 'Completed';
                 button.classList.add('opacity-50', 'cursor-not-allowed');
@@ -244,19 +246,12 @@ const App = (function() {
         } catch (error) {
             console.error('Contribution error:', error);
             
-            // Show error state
             const modal = document.querySelector('.workflow-modal');
-            if (!modal) {
-                console.error('Modal not found for error display');
-                return;
-            }
-
-            modal.classList.remove('hidden');
-            const steps = modal.querySelectorAll('.step');
+            const allSteps = modal.querySelectorAll('.step');
             const errorStep = modal.querySelector('.error-step');
             
             if (errorStep) {
-                steps.forEach(step => step.classList.remove('active'));
+                allSteps.forEach(step => step.classList.remove('active'));
                 errorStep.classList.add('active');
                 
                 let errorMessage = error.message || 'Transaction failed';
@@ -264,12 +259,6 @@ const App = (function() {
                     errorMessage = 'Transaction was rejected in your wallet';
                 } else if (errorMessage.includes('insufficient funds')) {
                     errorMessage = 'Insufficient XDC balance for gas fees';
-                } else if (errorMessage.includes('Task already completed')) {
-                    errorMessage = 'This task has already been completed';
-                } else if (errorMessage.includes('Task not found')) {
-                    errorMessage = 'This task does not exist';
-                } else if (errorMessage.includes('-32603')) {
-                    errorMessage = 'Contract execution failed. Please check if you have enough XDC for gas fees.';
                 }
                 
                 errorStep.querySelector('.error-message').textContent = errorMessage;
@@ -277,15 +266,29 @@ const App = (function() {
         }
     }
 
+    // Handle contribution registration
+    function handleContribution(button) {
+        const taskCard = button.closest('.task-card');
+        const allTaskCards = document.querySelectorAll('.task-card');
+        
+        allTaskCards.forEach(card => card.classList.remove('active'));
+        taskCard.classList.add('active');
+        
+        const modal = document.querySelector('.workflow-modal');
+        modal.classList.remove('hidden');
+        
+        currentStep = 0;
+        showStep(currentStep);
+    }
+
     // Public API
     return {
         init,
         connectWallet,
-        showWorkflow,
+        handleContribution,
         nextStep,
-        copyCode,
-        closeModal,
-        handleContribution
+        claimReward,
+        closeModal
     };
 })();
 
