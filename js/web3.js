@@ -301,13 +301,28 @@ class Web3Service {
 
     _convertXdcToEth(address) {
         if (!address) return address;
-        const ethAddress = '0x' + address.slice(3);
+        
+        // If already in ETH format, just checksum it
+        if (address.startsWith('0x')) {
+            return this.web3.utils.toChecksumAddress(address);
+        }
+        
+        // Convert from XDC to ETH format
+        if (address.startsWith('xdc')) {
+            const ethAddress = '0x' + address.slice(3);
+            return this.web3.utils.toChecksumAddress(ethAddress);
+        }
+        
+        // If no prefix, assume it's a raw address
+        const ethAddress = '0x' + address.replace('xdc', '').replace('0x', '');
         return this.web3.utils.toChecksumAddress(ethAddress);
     }
 
     _convertEthToXdc(address) {
         if (!address) return address;
-        const cleanAddr = address.toLowerCase().replace('0x', '');
+        
+        // Remove any existing prefix and convert to lowercase
+        const cleanAddr = address.toLowerCase().replace('0x', '').replace('xdc', '');
         return 'xdc' + cleanAddr;
     }
 
