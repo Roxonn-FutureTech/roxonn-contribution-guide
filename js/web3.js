@@ -6,18 +6,8 @@ const CONTRACT_ABI = [
     {
         "inputs": [
             {
-                "internalType": "address",
-                "name": "contributor",
-                "type": "address"
-            },
-            {
                 "internalType": "string",
                 "name": "githubIssueId",
-                "type": "string"
-            },
-            {
-                "internalType": "string",
-                "name": "complexity",
                 "type": "string"
             }
         ],
@@ -261,9 +251,7 @@ class Web3Service {
 
             // Create contract method
             const method = this.contract.methods.registerContribution(
-                checksummedAccount,
-                githubIssueId,
-                complexity
+                githubIssueId
             );
 
             // Try to estimate gas first
@@ -284,7 +272,13 @@ class Web3Service {
                 if (errorMessage.includes('execution reverted')) {
                     const revertMsg = errorMessage.match(/execution reverted: (.*?)(?:"|\}|$)/)?.[1];
                     if (revertMsg) {
-                        throw new Error(revertMsg);
+                        if (revertMsg.includes('Task already completed')) {
+                            throw new Error('This task has already been completed');
+                        } else if (revertMsg.includes('Task not found')) {
+                            throw new Error('Task reward not set. Please contact the repository owner.');
+                        } else {
+                            throw new Error(revertMsg);
+                        }
                     }
                 }
                 
