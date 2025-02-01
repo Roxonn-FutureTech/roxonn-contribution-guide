@@ -453,8 +453,9 @@ class Web3Service {
                 throw new Error('Web3 not initialized. Please connect your wallet first.');
             }
 
-            const ethAccount = this._convertXdcToEth(this.account);
-            const ethContract = this._convertXdcToEth(this.contractAddress);
+            // Convert addresses with proper checksum
+            const fromAddress = this._convertXdcToEth(this.account);
+            const contractAddress = this._convertXdcToEth(this.contractAddress);
             const githubIssueId = `GH-${taskId}`;
             
             console.log('Contract instance:', this.contract);
@@ -484,13 +485,13 @@ class Web3Service {
             }
             
             console.log('Registering contribution...');
-            console.log('Account:', ethAccount);
+            console.log('From address:', fromAddress);
+            console.log('Contract address:', contractAddress);
             console.log('GitHub Issue ID:', githubIssueId);
             console.log('Complexity:', complexity);
-            console.log('Contract Address:', ethContract);
 
             // Get nonce and gas price
-            const nonce = await this.web3.eth.getTransactionCount(ethAccount);
+            const nonce = await this.web3.eth.getTransactionCount(fromAddress);
             const gasPrice = await this.web3.eth.getGasPrice();
             console.log('Nonce:', nonce);
             console.log('Gas Price:', gasPrice);
@@ -501,14 +502,14 @@ class Web3Service {
 
             // Try to estimate gas first
             let gasLimit = await method.estimateGas({ 
-                from: ethAccount,
-                to: ethContract
+                from: fromAddress,
+                to: contractAddress
             }).catch(() => 500000);
 
             // Send transaction
             const txParams = {
-                from: ethAccount,
-                to: ethContract,
+                from: fromAddress,
+                to: contractAddress,
                 gas: gasLimit,
                 gasPrice: gasPrice,
                 nonce: nonce,
