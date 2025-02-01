@@ -334,11 +334,28 @@ class Web3Service {
             }
 
             const githubIssueId = `GH-${taskId}`;
-            const reward = await this.contract.methods.taskRewards(githubIssueId).call();
-            return this.web3.utils.fromWei(reward, 'ether');
+            console.log('Getting task reward for:', githubIssueId);
+            console.log('Using contract address:', this.contractAddress);
+
+            // Get the raw contract call
+            const method = this.contract.methods.taskRewards(githubIssueId);
+            console.log('Method data:', method.encodeABI());
+
+            // Call the method
+            const reward = await method.call().catch(error => {
+                console.error('Task reward call failed:', error);
+                // Return 0 if call fails
+                return '0';
+            });
+
+            console.log('Raw reward value:', reward);
+            const rewardInEther = this.web3.utils.fromWei(reward, 'ether');
+            console.log('Reward in ether:', rewardInEther);
+            return rewardInEther;
         } catch (error) {
             console.error('Get task reward error:', error);
-            throw error;
+            // Return 0 for any errors
+            return '0';
         }
     }
 
@@ -349,10 +366,23 @@ class Web3Service {
             }
 
             const githubIssueId = `GH-${taskId}`;
-            return await this.contract.methods.completedTasks(githubIssueId).call();
+            console.log('Checking completion for:', githubIssueId);
+
+            // Get the raw contract call
+            const method = this.contract.methods.completedTasks(githubIssueId);
+            console.log('Method data:', method.encodeABI());
+
+            // Call the method
+            const completed = await method.call().catch(error => {
+                console.error('Task completion check failed:', error);
+                return false;
+            });
+
+            console.log('Task completion status:', completed);
+            return completed;
         } catch (error) {
             console.error('Check task completion error:', error);
-            throw error;
+            return false;
         }
     }
 
@@ -366,13 +396,18 @@ class Web3Service {
             const checksummedContract = this.web3.utils.toChecksumAddress(this.contractAddress.replace('xdc', '0x'));
             const githubIssueId = `GH-${taskId}`;
             
+            console.log('Contract instance:', this.contract);
+            console.log('Contract methods:', Object.keys(this.contract.methods));
+            
             // Check if task exists and is not completed
             const reward = await this.getTaskReward(taskId);
+            console.log('Task reward:', reward);
             if (reward === '0') {
                 throw new Error('Task reward not set. Please contact the repository owner.');
             }
 
             const isCompleted = await this.isTaskCompleted(taskId);
+            console.log('Task completed:', isCompleted);
             if (isCompleted) {
                 throw new Error('This task has already been completed');
             }
@@ -391,6 +426,7 @@ class Web3Service {
 
             // Create contract method
             const method = this.contract.methods.registerContribution(githubIssueId);
+            console.log('Method data:', method.encodeABI());
 
             // Try to estimate gas first
             let gasLimit;
@@ -402,44 +438,48 @@ class Web3Service {
                 gasLimit = Math.floor(gasLimit * 1.2); // Add 20% buffer
             } catch (gasError) {
                 console.warn('Gas estimation failed:', gasError);
+                console.log('Using default gas limit');
                 gasLimit = 500000; // Use default gas limit
             }
 
             // Send transaction
-            const promiEvent = method.send({ 
+            const txParams = {
                 from: checksummedAccount,
+                to: checksummedContract,
                 gas: gasLimit,
                 gasPrice: gasPrice,
-                nonce: nonce
-            });
+                nonce: nonce,
+                data: method.encodeABI()
+            };
+            console.log('Transaction parameters:', txParams);
 
             // Get transaction hash immediately
             const transactionHash = await new Promise((resolve, reject) => {
+                const promiEvent = method.send(txParams);
+
                 promiEvent.once('transactionHash', (hash) => {
                     console.log('Transaction hash:', hash);
                     resolve(hash);
                 });
+
                 promiEvent.once('error', (error) => {
                     const errorMessage = error?.message || 'Transaction failed';
-                    console.error('Transaction error:', errorMessage);
+                    console.error('Transaction error:', error);
+                    console.error('Error message:', errorMessage);
                     reject(new Error(errorMessage));
+                });
+
+                // Also listen for receipt in case of quick confirmation
+                promiEvent.once('receipt', (receipt) => {
+                    console.log('Transaction receipt:', receipt);
+                    if (!receipt?.status) {
+                        reject(new Error('Transaction failed'));
+                    }
                 });
             });
 
-            // Return both hash and confirmation promise
-            return {
-                transactionHash,
-                confirmation: promiEvent.then((receipt) => {
-                    console.log('Transaction receipt:', receipt);
-                    if (!receipt?.status) {
-                        throw new Error('Transaction failed');
-                    }
-                    return receipt;
-                }).catch((error) => {
-                    console.error('Confirmation error:', error);
-                    throw error;
-                })
-            };
+            console.log('Transaction submitted:', transactionHash);
+            return { transactionHash };
         } catch (error) {
             console.error('Transaction error:', error);
             throw error;
