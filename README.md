@@ -129,4 +129,66 @@ This is a demo repository. For actual contributions to Roxonn, please visit:
 
 MIT License - feel free to use this demo for learning purposes!
 
+## Comprehensive Contribution Guide
+
+### Table of Contents
+
+- [Getting Started](#getting-started-1)
+- [Code Style](#code-style)
+- [Pull Request Process](#pull-request-process)
+- [Blockchain Integration](#blockchain-integration)
+- [Community Guidelines](#community-guidelines)
+
+### Getting Started
+
+1. Fork the repository you want to contribute to
+2. Clone your fork locally
+3. Set up the development environment
+4. Create a new branch for your changes
+5. Make your changes following our guidelines
+6. Submit a pull request
+
+### Code Style
+
+- Follow the existing code style
+- Use meaningful variable and function names
+- Add comments for complex logic
+- Write unit tests for new features
+
+### Pull Request Process
+
+1. Create a descriptive branch name
+2. Make focused, atomic commits
+3. Write clear commit messages
+4. Update documentation if needed
+5. Request review from maintainers
+6. Address review comments promptly
+
+### Blockchain Integration
+
+All pull requests in Roxonn projects are tracked on the blockchain:
+
+- Each PR gets a unique identifier
+- PR status changes are recorded on-chain
+- Transaction links are displayed in the dashboard
+- Contributors can verify their contributions
+
+### Community Guidelines
+
+- Be respectful and inclusive
+- Help others learn and grow
+- Share knowledge freely
+- Follow our code of conduct
+
+### Questions?
+
+If you have any questions, feel free to:
+- Open an issue
+- Join our Discord community
+- Email us at support@roxonn.com
+
+### License
+
+MIT License - See LICENSE file for details
+
 Ready to start? Check out our projects and earn your first ROXN tokens today! 🚀
